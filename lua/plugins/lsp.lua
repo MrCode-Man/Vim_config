@@ -25,6 +25,7 @@ return {
         snippet = { expand = function(args) luasnip.lsp_expand(args.body) end },
         window = {
           completion = cmp.config.window.bordered(),
+          documentation = cmp.config.window.bordered(),
         },
         formatting = {
           format = lspkind.cmp_format({
@@ -76,27 +77,50 @@ return {
     dependencies = {
       "williamboman/mason.nvim",
       "williamboman/mason-lspconfig.nvim",
+      "ray-x/lsp_signature.nvim",
+      "smjonas/inc-rename.nvim", -- ✨ Dependência do Renomeamento
     },
     config = function()
-      -- Garante a criação dos atalhos clássicos ao conectar o LSP
+      -- Inicializa o plugin de rename
+      require("inc_rename").setup()
+
       vim.api.nvim_create_autocmd("LspAttach", {
         callback = function(args)
           local opts = { buffer = args.buf }
+          local client = vim.lsp.get_client_by_id(args.data.client_id)
+
           vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
           vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
-          vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, opts) -- 💥 MODIFICADO: Atualizado para Espaço + r + n
           vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, opts)
           vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, opts)
           vim.keymap.set("n", "]d", vim.diagnostic.goto_next, opts)
+
+          -- ✨ Renomeamento em Tempo Real (Estilo JetBrains)
+          vim.keymap.set("n", "<leader>rn", function()
+            return ":IncRename " .. vim.fn.expand("<cword>")
+          end, { expr = true, buffer = args.buf, desc = "Renomear" })
+
+          -- Dicas de parâmetros
+          require("lsp_signature").on_attach({
+            bind = true,
+            handler_opts = { border = "rounded" },
+            hint_enable = false,
+          }, args.buf)
+
+          -- Inlay Hints (Dicas fantasmas)
+          if client and client.server_capabilities.inlayHintProvider and vim.lsp.inlay_hint then
+            vim.lsp.inlay_hint.enable(true, { bufnr = args.buf })
+          end
         end,
       })
 
-      -- Customização visual dos erros (Estilo bolinhas do LazyVim)
+      -- Customização visual dos erros
       local signs = { Error = " ", Warn = " ", Hint = " ", Info = " " }
       for type, icon in pairs(signs) do
         local hl = "DiagnosticSign" .. type
         vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = hl })
       end
+      
       vim.diagnostic.config({
         virtual_text = { prefix = "●", source = "if_many" },
         signs = true,
@@ -105,10 +129,8 @@ return {
         severity_sort = true,
       })
 
-      -- Inicializa o Mason primeiro
       require("mason").setup()
 
-      -- Inicializa o Mason-LSPConfig e configura os servidores nativamente
       local capabilities = require('cmp_nvim_lsp').default_capabilities()
       local lspconfig = require("lspconfig")
 
@@ -117,14 +139,63 @@ return {
         automatic_installation = true,
       })
 
-      -- Configura cada servidor automaticamente assim que o Mason baixa eles
       require("mason-lspconfig").setup_handlers({
         function(server_name)
           lspconfig[server_name].setup({
             capabilities = capabilities,
           })
         end,
+        ["lua_ls"] = function()
+          lspconfig.lua_ls.setup({
+            capabilities = capabilities,
+            settings = {
+              Lua = {
+                diagnostics = { globals = { "vim" } },
+                workspace = {
+                  library = vim.api.nvim_get_runtime_file("", true),
+                  checkThirdParty = false,
+                },
+                telemetry = { enable = false },
+              },
+            },
+          })
+        end,
       })
     end
+  },
+
+  -- 4. ✨ Barra de Contexto no Topo (Breadcrumbs)
+  {
+    "Bekaboo/dropbar.nvim",
+    -- Inicia automaticamente e lê as informações do LSP sem precisar configurar atalhos
+  },
+
+  -- 5. ✨ Formatador de Código Automático (Conform)
+  {
+    "stevearc/conform.nvim",
+    opts = {},
+    config = function()
+      require("conform").setup({
+        -- Mapeamento de formatadores (Ex: stylua para Lua, black para Python)
+        -- Você pode instalar eles pelo Mason depois via `:Mason`
+        formatters_by_ft = {
+          lua = { "stylua" },
+          python = { "isort", "black" },
+          rust = { "rustfmt", lsp_format = "fallback" },
+          javascript = { "prettier" },
+          -- Use o "*" para rodar em todos os arquivos ou "_" para arquivos sem formatador
+          ["_"] = { "trim_whitespace" },
+        },
+      })
+
+      -- Atalho Espaço + s para formatar
+      vim.keymap.set({ "n", "v" }, "<leader>s", function()
+        require("conform").format({
+          lsp_fallback = true, -- Se não achar formatador específico, usa o LSP
+          async = false,
+          timeout_ms = 500,
+        })
+      end, { desc = "Formatar código" })
+    end,
   }
 }
