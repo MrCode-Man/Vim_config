@@ -16,18 +16,10 @@ return {
         },
       })
 
-      -- ATALHOS DE TECLA (Prefixados com <leader>g para Git)
-
-      -- Espaço + g + p (Preview): Mostra uma janela flutuante com o que mudou no bloco atual
+      -- ATALHOS DE TECLA DO GITSIGNS (Iniciados com <leader>g)
       vim.keymap.set("n", "<leader>gp", gitsigns.preview_hunk, { desc = "Git pré-visualizar alteração" })
-
-      -- Espaço + g + b (Blame): Mostra quem alterou a linha atual e a mensagem do commit
       vim.keymap.set("n", "<leader>gb", gitsigns.blame_line, { desc = "Git autor da linha" })
-
-      -- Espaço + g + s (Stage): Faz o 'git add' apenas do bloco sob o cursor
       vim.keymap.set("n", "<leader>gs", gitsigns.stage_hunk, { desc = "Git dar add no bloco" })
-
-      -- Espaço + g + r (Reset): Desfaz as alterações apenas do bloco sob o cursor
       vim.keymap.set("n", "<leader>gr", gitsigns.reset_hunk, { desc = "Git desfazer bloco" })
 
       -- NAVEGAÇÃO ENTRE ALTERAÇÕES DO CÓDIGO ( ]c e [c )
@@ -50,10 +42,25 @@ return {
     "sindrets/diffview.nvim",
     dependencies = { "nvim-lua/plenary.nvim" },
     config = function()
+      local actions = require("diffview.actions")
+
+      require("diffview").setup({
+        keymaps = {
+          view = {
+            -- Espaço + g + o: Escolher a TUA versão (Esquerda / Ours)
+            { "n", "<leader>go", actions.conflict_choose("ours"), { desc = "Git escolher nossa versão (Ours)" } },
+            -- Espaço + g + t: Escolher a OUTRA versão (Direita / Theirs)
+            { "n", "<leader>gt", actions.conflict_choose("theirs"), { desc = "Git escolher versão recebida (Theirs)" } },
+            -- Espaço + g + b: Escolher AMBAS as versões (Both)
+            { "n", "<leader>gb", actions.conflict_choose("all"), { desc = "Git manter ambas as versões" } },
+          },
+        },
+      })
+
       -- Espaço + g + d (Diff Open): Abre o painel de diff completo do projeto
       vim.keymap.set("n", "<leader>gd", "<cmd>DiffviewOpen<cr>", { desc = "Git abrir visão de Diff/Conflitos" })
 
-      -- Espaço + g + q (Diff Quit): Fecha a janela do diff sem colidir com <leader>ca
+      -- Espaço + g + q (Diff Quit): Fecha a janela do diff
       vim.keymap.set("n", "<leader>gq", "<cmd>DiffviewClose<cr>", { desc = "Git fechar visão de Diff" })
     end,
   },
