@@ -19,6 +19,7 @@ vim.opt.smartindent = true     -- Ativa indentação inteligente baseada na ling
 -- Comportamento de Telas (Splits)
 vim.opt.splitbelow = true      -- Abre novas janelas horizontais para baixo
 vim.opt.splitright = true      -- Abre novas janelas verticais para a direita
+vim.opt.cmdheight = 0
 
 -- Busca Eficiente
 vim.opt.ignorecase = true      -- Ignora maiúsculas/minúsculas na busca...
