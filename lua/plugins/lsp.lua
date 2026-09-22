@@ -78,55 +78,83 @@ return {
       "williamboman/mason.nvim",
       "williamboman/mason-lspconfig.nvim",
       "ray-x/lsp_signature.nvim",
-      "smjonas/inc-rename.nvim", -- ✨ Dependência do Renomeamento
+      "smjonas/inc-rename.nvim",
     },
     config = function()
-      -- Inicializa o plugin de rename
       require("inc_rename").setup()
+
+      -- Bordas arredondadas em todas as janelas flutuantes do LSP (hover, assinatura, diagnóstico)
+      -- É um dos detalhes visuais que deixa mais parecido com o polimento da JetBrains
+      local border = "rounded"
+      vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, { border = border })
+      vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, { border = border })
 
       vim.api.nvim_create_autocmd("LspAttach", {
         callback = function(args)
           local opts = { buffer = args.buf }
           local client = vim.lsp.get_client_by_id(args.data.client_id)
 
+          -- Atalhos SEM leader: convenção padrão do próprio Neovim/LSP, não entram
+          -- no esquema de prefixos porque nunca vão conflitar com <leader>algo.
           vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
           vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
-          vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, opts)
           vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, opts)
           vim.keymap.set("n", "]d", vim.diagnostic.goto_next, opts)
 
-          -- ✨ Renomeamento em Tempo Real (Estilo JetBrains)
-          vim.keymap.set("n", "<leader>rn", function()
-            return ":IncRename " .. vim.fn.expand("<cword>")
-          end, { expr = true, buffer = args.buf, desc = "Renomear" })
+          -- Todo atalho de LSP com leader começa com <leader>l
+          local function map(sufixo, acao, descricao)
+            vim.keymap.set("n", "<leader>l" .. sufixo, acao, { buffer = args.buf, desc = "LSP: " .. descricao })
+          end
 
-          -- Dicas de parâmetros
+          map("a", vim.lsp.buf.code_action,     "ação rápida / quick fix")
+          map("u", vim.lsp.buf.references,      "usos dessa palavra (find usages)")
+          map("i", vim.lsp.buf.implementation,  "ir para implementação")
+          map("t", vim.lsp.buf.type_definition, "ir para definição do tipo")
+          map("d", vim.diagnostic.open_float,   "mostrar erro/aviso da linha")
+          map("p", "<cmd>Trouble diagnostics toggle<cr>", "painel de problemas do projeto")
+
+          -- Renomear em tempo real (você vê o resultado enquanto digita, igual JetBrains)
+          vim.keymap.set("n", "<leader>lr", function()
+            return ":IncRename " .. vim.fn.expand("<cword>")
+          end, { expr = true, buffer = args.buf, desc = "LSP: renomear" })
+
+          -- Dicas de parâmetros ao digitar
           require("lsp_signature").on_attach({
             bind = true,
-            handler_opts = { border = "rounded" },
+            handler_opts = { border = border },
             hint_enable = false,
           }, args.buf)
 
-          -- Inlay Hints (Dicas fantasmas)
+          -- Inlay Hints (dicas fantasmas de tipo)
           if client and client.server_capabilities.inlayHintProvider and vim.lsp.inlay_hint then
             vim.lsp.inlay_hint.enable(true, { bufnr = args.buf })
           end
         end,
       })
 
+      -- Mostra o erro da linha automaticamente ao parar o cursor em cima dela.
+      -- É o mais próximo que dá de imitar o "tooltip" de erro que a JetBrains
+      -- mostra sozinha. Se achar barulhento, é só apagar esse bloco.
+      vim.api.nvim_create_autocmd("CursorHold", {
+        callback = function()
+          vim.diagnostic.open_float(nil, { focusable = false, scope = "cursor" })
+        end,
+      })
+
       -- Customização visual dos erros
-      local signs = { Error = " ", Warn = " ", Hint = " ", Info = " " }
+      local signs = { Error = " ", Warn = " ", Hint = " ", Info = " " }
       for type, icon in pairs(signs) do
         local hl = "DiagnosticSign" .. type
         vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = hl })
       end
-      
+
       vim.diagnostic.config({
         virtual_text = { prefix = "●", source = "if_many" },
         signs = true,
         underline = true,
         update_in_insert = false,
         severity_sort = true,
+        float = { border = border },
       })
 
       require("mason").setup()
@@ -164,38 +192,42 @@ return {
     end
   },
 
-  -- 4. ✨ Barra de Contexto no Topo (Breadcrumbs)
+  -- 4. Painel de Problemas do projeto inteiro, igual ao painel de erros da JetBrains
   {
-    "Bekaboo/dropbar.nvim",
-    -- Inicia automaticamente e lê as informações do LSP sem precisar configurar atalhos
+    "folke/trouble.nvim",
+    dependencies = { "nvim-tree/nvim-web-devicons" },
+    cmd = "Trouble",
+    opts = {},
   },
 
-  -- 5. ✨ Formatador de Código Automático (Conform)
+  -- 5. Barra de Contexto no Topo (Breadcrumbs)
+  {
+    "Bekaboo/dropbar.nvim",
+  },
+
+  -- 6. Formatador de Código Automático (Conform)
   {
     "stevearc/conform.nvim",
     opts = {},
     config = function()
       require("conform").setup({
-        -- Mapeamento de formatadores (Ex: stylua para Lua, black para Python)
-        -- Você pode instalar eles pelo Mason depois via `:Mason`
         formatters_by_ft = {
           lua = { "stylua" },
           python = { "isort", "black" },
           rust = { "rustfmt", lsp_format = "fallback" },
           javascript = { "prettier" },
-          -- Use o "*" para rodar em todos os arquivos ou "_" para arquivos sem formatador
           ["_"] = { "trim_whitespace" },
         },
       })
 
-      -- Atalho Espaço + s para formatar
-      vim.keymap.set({ "n", "v" }, "<leader>s", function()
+      -- Fica junto do resto dos atalhos de LSP, por isso <leader>lf
+      vim.keymap.set({ "n", "v" }, "<leader>lf", function()
         require("conform").format({
-          lsp_fallback = true, -- Se não achar formatador específico, usa o LSP
+          lsp_fallback = true,
           async = false,
           timeout_ms = 500,
         })
-      end, { desc = "Formatar código" })
+      end, { desc = "LSP: formatar código" })
     end,
   }
 }
