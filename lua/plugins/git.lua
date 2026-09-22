@@ -31,7 +31,6 @@ return {
       vim.keymap.set("n", "<leader>gr", gitsigns.reset_hunk, { desc = "Git desfazer bloco" })
 
       -- NAVEGAÇÃO ENTRE ALTERAÇÕES DO CÓDIGO ( ]c e [c )
-      -- Pula direto para a próxima alteração ou a anterior no arquivo
       vim.keymap.set("n", "]c", function()
         if vim.wo.diff then return "]c" end
         vim.schedule(function() gitsigns.next_hunk() end)
@@ -54,8 +53,8 @@ return {
       -- Espaço + g + d (Diff Open): Abre o painel de diff completo do projeto
       vim.keymap.set("n", "<leader>gd", "<cmd>DiffviewOpen<cr>", { desc = "Git abrir visão de Diff/Conflitos" })
 
-      -- Espaço + g + c (Diff Close): Fecha a janela de diff e volta ao normal
-      vim.keymap.set("n", "<leader>gc", "<cmd>DiffviewClose<cr>", { desc = "Git fechar visão de Diff" })
+      -- Espaço + g + q (Diff Quit): Fecha a janela do diff sem colidir com <leader>ca
+      vim.keymap.set("n", "<leader>gq", "<cmd>DiffviewClose<cr>", { desc = "Git fechar visão de Diff" })
     end,
   },
 }
