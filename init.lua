@@ -1,11 +1,10 @@
 local original_notify = vim.notify
 vim.notify = function(msg, log_level, opts)
-  if msg and (msg:find("deprecated") or msg:find("framework") or msg:find("lspconfig")) then
+  if log_level == vim.log.levels.INFO and msg and msg:find("some_specific_harmless_string") then
     return
   end
   original_notify(msg, log_level, opts)
 end
-
 
 vim.keymap.set({'n', 'i', 'v'}, '<F1>', '<Nop>', { silent = true })
 

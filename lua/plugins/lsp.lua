@@ -83,11 +83,13 @@ return {
     config = function()
       require("inc_rename").setup()
 
-      -- Bordas arredondadas em todas as janelas flutuantes do LSP (hover, assinatura, diagnóstico)
-      -- É um dos detalhes visuais que deixa mais parecido com o polimento da JetBrains
       local border = "rounded"
       vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, { border = border })
       vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, { border = border })
+
+      -- Diagnostics são checados com mais frequência (padrão é 4000ms).
+      -- Isso também deixa o CursorHold abaixo mais responsivo.
+      vim.opt.updatetime = 300
 
       vim.api.nvim_create_autocmd("LspAttach", {
         callback = function(args)
@@ -113,6 +115,17 @@ return {
           map("d", vim.diagnostic.open_float,   "mostrar erro/aviso da linha")
           map("p", "<cmd>Trouble diagnostics toggle<cr>", "painel de problemas do projeto")
 
+          -- Liga/desliga o modo "chato" (virtual_lines + update_in_insert) na hora,
+          -- pra quando o aviso constante atrapalhar mais do que ajudar.
+          map("x", function()
+            local atual = vim.diagnostic.config().virtual_lines
+            vim.diagnostic.config({
+              virtual_lines = not atual,
+              update_in_insert = not atual,
+            })
+            vim.notify("Diagnostics modo chato: " .. tostring(not atual))
+          end, "alternar modo chato de diagnostics")
+
           -- Renomear em tempo real (você vê o resultado enquanto digita, igual JetBrains)
           vim.keymap.set("n", "<leader>lr", function()
             return ":IncRename " .. vim.fn.expand("<cword>")
@@ -133,8 +146,6 @@ return {
       })
 
       -- Mostra o erro da linha automaticamente ao parar o cursor em cima dela.
-      -- É o mais próximo que dá de imitar o "tooltip" de erro que a JetBrains
-      -- mostra sozinha. Se achar barulhento, é só apagar esse bloco.
       vim.api.nvim_create_autocmd("CursorHold", {
         callback = function()
           vim.diagnostic.open_float(nil, { focusable = false, scope = "cursor" })
@@ -148,47 +159,92 @@ return {
         vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = hl })
       end
 
+      -- Config "chata" de propósito: avisa enquanto você digita, mostra
+      -- sempre o texto do erro (não só quando tem vários na linha), e
+      -- ainda desenha a linha completa do diagnóstico embaixo do código
+      -- na linha onde o cursor tá. Dá pra desligar com <leader>lx.
       vim.diagnostic.config({
-        virtual_text = { prefix = "●", source = "if_many" },
+        virtual_text = {
+          prefix = "●",
+          source = "always",
+          severity = { min = vim.diagnostic.severity.HINT },
+        },
+        virtual_lines = { only_current_line = true },
         signs = true,
         underline = true,
-        update_in_insert = false,
+        update_in_insert = true,
         severity_sort = true,
-        float = { border = border },
+        float = {
+          border = border,
+          source = "always",
+          header = "",
+          focusable = false,
+        },
       })
 
       require("mason").setup()
 
       local capabilities = require('cmp_nvim_lsp').default_capabilities()
-      local lspconfig = require("lspconfig")
 
+      -- "ruff" faz linting (regras de estilo, imports não usados, código morto);
+      -- "pyright" faz type-checking. Os dois rodam juntos no Python, sem conflito,
+      -- porque cada um cobre diagnostics diferentes.
       require("mason-lspconfig").setup({
-        ensure_installed = { "pyright", "rust_analyzer", "clangd", "lua_ls" },
+        ensure_installed = { "pyright", "ruff", "rust_analyzer", "clangd", "lua_ls" },
         automatic_installation = true,
       })
 
-      require("mason-lspconfig").setup_handlers({
-        function(server_name)
-          lspconfig[server_name].setup({
-            capabilities = capabilities,
-          })
-        end,
-        ["lua_ls"] = function()
-          lspconfig.lua_ls.setup({
-            capabilities = capabilities,
-            settings = {
-              Lua = {
-                diagnostics = { globals = { "vim" } },
-                workspace = {
-                  library = vim.api.nvim_get_runtime_file("", true),
-                  checkThirdParty = false,
-                },
-                telemetry = { enable = false },
-              },
+      -- Capabilities valem pra todos os servidores por padrão.
+      vim.lsp.config('*', { capabilities = capabilities })
+
+      vim.lsp.config('pyright', {
+        settings = {
+          python = {
+            analysis = {
+              -- "strict" reporta MUITA coisa que o modo padrão ignora:
+              -- tipos implícitos em Any, retornos não anotados, etc.
+              -- Se achar exagerado, troca pra "standard".
+              typeCheckingMode = "strict",
+              autoSearchPaths = true,
+              useLibraryCodeForTypes = true,
+              diagnosticMode = "workspace", -- analisa o projeto inteiro, não só o arquivo aberto
             },
-          })
+          },
+        },
+      })
+
+      vim.lsp.config('ruff', {
+        init_options = {
+          settings = {
+            -- Deixa o ruff reportar tudo que ele consegue, sem suprimir por padrão.
+            logLevel = "warn",
+          },
+        },
+        -- Evita hover duplicado: deixa o pyright cuidar do hover/type info,
+        -- o ruff só cuida de diagnostics + code actions de lint.
+        on_attach = function(client)
+          client.server_capabilities.hoverProvider = false
         end,
       })
+
+      vim.lsp.config('lua_ls', {
+        settings = {
+          Lua = {
+            diagnostics = {
+              globals = { "vim" },
+              -- Deixa o lua_ls reclamar de variável não usada, redefinição etc.
+              disable = {},
+            },
+            workspace = {
+              library = vim.api.nvim_get_runtime_file("", true),
+              checkThirdParty = false,
+            },
+            telemetry = { enable = false },
+          },
+        },
+      })
+
+      vim.lsp.enable({ "pyright", "ruff", "rust_analyzer", "clangd", "lua_ls" })
     end
   },
 
