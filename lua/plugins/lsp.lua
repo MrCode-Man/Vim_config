@@ -204,7 +204,7 @@ return {
               -- "strict" reporta MUITA coisa que o modo padrão ignora:
               -- tipos implícitos em Any, retornos não anotados, etc.
               -- Se achar exagerado, troca pra "standard".
-              typeCheckingMode = "strict",
+              typeCheckingMode = "standard",
               autoSearchPaths = true,
               useLibraryCodeForTypes = true,
               diagnosticMode = "workspace", -- analisa o projeto inteiro, não só o arquivo aberto
