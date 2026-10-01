@@ -186,28 +186,38 @@ return {
 
       local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
-      -- "ruff" faz linting (regras de estilo, imports não usados, código morto);
-      -- "pyright" faz type-checking. Os dois rodam juntos no Python, sem conflito,
-      -- porque cada um cobre diagnostics diferentes.
+      -- Padrão usado em todas as linguagens: um servidor faz type-checking,
+      -- outro (separado) faz linting de estilo/boas práticas. Os dois rodam
+      -- juntos sem conflito porque cobrem diagnostics diferentes.
+      --   Python  -> pyright (tipos) + ruff (lint)
+      --   Rust    -> rust_analyzer rodando clippy no lugar de cargo check
+      --   C/C++   -> clangd com clang-tidy embutido
       require("mason-lspconfig").setup({
-        ensure_installed = { "pyright", "ruff", "rust_analyzer", "clangd", "lua_ls" },
+        ensure_installed = {
+          "pyright", "ruff",
+          "rust_analyzer",
+          "clangd",
+          "lua_ls",
+        },
         automatic_installation = true,
       })
 
       -- Capabilities valem pra todos os servidores por padrão.
       vim.lsp.config('*', { capabilities = capabilities })
 
+      -- ---------------------------------------------------------------
+      -- PYTHON
+      -- ---------------------------------------------------------------
       vim.lsp.config('pyright', {
         settings = {
           python = {
             analysis = {
               -- "strict" reporta MUITA coisa que o modo padrão ignora:
               -- tipos implícitos em Any, retornos não anotados, etc.
-              -- Se achar exagerado, troca pra "standard".
               typeCheckingMode = "standard",
               autoSearchPaths = true,
               useLibraryCodeForTypes = true,
-              diagnosticMode = "workspace", -- analisa o projeto inteiro, não só o arquivo aberto
+              diagnosticMode = "workspace",
             },
           },
         },
@@ -215,24 +225,71 @@ return {
 
       vim.lsp.config('ruff', {
         init_options = {
-          settings = {
-            -- Deixa o ruff reportar tudo que ele consegue, sem suprimir por padrão.
-            logLevel = "warn",
-          },
+          settings = { logLevel = "warn" },
         },
-        -- Evita hover duplicado: deixa o pyright cuidar do hover/type info,
-        -- o ruff só cuida de diagnostics + code actions de lint.
+        -- Evita hover duplicado: pyright cuida do hover/type info,
+        -- ruff só cuida de diagnostics + code actions de lint.
         on_attach = function(client)
           client.server_capabilities.hoverProvider = false
         end,
       })
 
+      -- ---------------------------------------------------------------
+      -- RUST
+      -- ---------------------------------------------------------------
+      vim.lsp.config('rust_analyzer', {
+        settings = {
+          ["rust-analyzer"] = {
+            check = {
+              -- clippy é bem mais chato/rigoroso que o "cargo check" padrão:
+              -- pega code smells, não só erro de compilação.
+              command = "clippy",
+              extraArgs = { "--all-targets", "--all-features" },
+            },
+            cargo = {
+              allFeatures = true,
+            },
+            procMacro = { enable = true },
+            diagnostics = {
+              experimental = { enable = true },
+            },
+          },
+        },
+      })
+
+      -- ---------------------------------------------------------------
+      -- C / C++
+      -- ---------------------------------------------------------------
+      vim.lsp.config('clangd', {
+        cmd = {
+          "clangd",
+          "--background-index",
+          -- Ativa o clang-tidy embutido no clangd: pega bugs, não só
+          -- erro de compilação (crie um .clang-tidy no projeto pra
+          -- customizar as regras; senão usa o conjunto padrão).
+          "--clang-tidy",
+          "--completion-style=detailed",
+          "--header-insertion=iwyu",
+          "--suggest-missing-includes",
+          "--all-scopes-completion",
+          "--cross-file-rename",
+        },
+        init_options = {
+          -- Warnings extras aplicados quando não há compile_commands.json
+          -- no projeto (fallback). Se você já gera compile_commands.json
+          -- via cmake/bear, essas flags são ignoradas em favor das reais.
+          fallbackFlags = { "-Wall", "-Wextra", "-Wpedantic" },
+        },
+      })
+
+      -- ---------------------------------------------------------------
+      -- LUA
+      -- ---------------------------------------------------------------
       vim.lsp.config('lua_ls', {
         settings = {
           Lua = {
             diagnostics = {
               globals = { "vim" },
-              -- Deixa o lua_ls reclamar de variável não usada, redefinição etc.
               disable = {},
             },
             workspace = {
@@ -244,7 +301,12 @@ return {
         },
       })
 
-      vim.lsp.enable({ "pyright", "ruff", "rust_analyzer", "clangd", "lua_ls" })
+      vim.lsp.enable({
+        "pyright", "ruff",
+        "rust_analyzer",
+        "clangd",
+        "lua_ls",
+      })
     end
   },
 
@@ -271,7 +333,8 @@ return {
           lua = { "stylua" },
           python = { "isort", "black" },
           rust = { "rustfmt", lsp_format = "fallback" },
-          javascript = { "prettier" },
+          c = { "clang-format" },
+          cpp = { "clang-format" },
           ["_"] = { "trim_whitespace" },
         },
       })
