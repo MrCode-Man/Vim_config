@@ -107,4 +107,3 @@ grr             referências
 gri             implementação
 grt             definição do tipo
 gO              símbolos do arquivo
-(seus <leader>l* já cobrem esses; os padrões são só uma alternativa)
