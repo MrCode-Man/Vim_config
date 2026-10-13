@@ -1,7 +1,6 @@
 ATALHOS DO NEOVIM
 =================
-Arquivo de consulta escrito à mão: quando mudar um atalho no código,
-atualize aqui também. Dentro do nvim, <leader>? mostra os do buffer atual.
+Dentro do nvim, <leader>? mostra os do buffer atual.
 
 <leader> = espaço
 
@@ -10,9 +9,9 @@ GERAL
 \               abrir/fechar o Neo-tree (árvore de arquivos)
 <leader>?       mostrar os atalhos do buffer atual (which-key)
 <F1>            desativado de propósito (não abre a ajuda)
+-------------------------
 
 JANELAS (lua/keymaps.lua)
--------------------------
 <C-h>           focar na janela da esquerda
 <C-j>           focar na janela de baixo
 <C-k>           focar na janela de cima
@@ -22,14 +21,14 @@ JANELAS (lua/keymaps.lua)
 <leader>sk      dividir a tela para cima
 <leader>sl      dividir a tela para a direita
 
-TELESCOPE  <leader>t
 --------------------
+TELESCOPE  <leader>t
 <leader>tf      buscar arquivos
 <leader>tg      buscar texto (grep)
 <leader>tb      listar buffers
 
-GIT  <leader>g  (lua/plugins/git.lua)
 -------------------------------------
+GIT  <leader>g  (lua/plugins/git.lua)
 <leader>gp      pré-visualizar o bloco alterado
 <leader>gs      stage do bloco (alterna)
 <leader>gr      descartar a alteração do bloco
@@ -48,8 +47,8 @@ GIT  <leader>g  (lua/plugins/git.lua)
   <leader>gt    escolher a versão recebida (theirs)
   <leader>ga    manter as duas versões
 
-LSP  (só em buffers com servidor LSP ativo)
 -------------------------------------------
+LSP  (só em buffers com servidor LSP ativo)
 Sem leader:
 gd              ir para a definição (Telescope: salta direto se for uma só)
 K               documentação / tipo sob o cursor
@@ -75,16 +74,16 @@ Com <leader>l:
 <leader>ln      executar code lens da linha (se o servidor suportar)
 <leader>lf      formatar o código (normal e visual; funciona sem LSP)
 
-CÓDIGO / TREESITTER
 -------------------
+CÓDIGO / TREESITTER
 ]f / [f         próxima / anterior função
 ]k / [k         próxima / anterior classe
 af / if         função inteira / só o corpo      (use com d, c, y, v...)
 ac / ic         classe inteira / só o corpo
 aa / ia         parâmetro inteiro / só o conteúdo
 
-AUTOCOMPLETAR (nvim-cmp, modo insert)
 -------------------------------------
+AUTOCOMPLETAR (nvim-cmp, modo insert)
 <C-j> / <C-k>   próximo / anterior item
 <Tab> / <S-Tab> próximo / anterior item (ou pula nos snippets)
 <C-Space>       abrir o autocompletar
@@ -95,13 +94,13 @@ AUTOCOMPLETAR (nvim-cmp, modo insert)
   <Tab> / <S-Tab>   próximo / anterior item
   <CR>              aceitar o item
 
-ATALHOS DE COMANDO (digitar a palavra inteira em : )
 ----------------------------------------------------
+ATALHOS DE COMANDO (digitar a palavra inteira em : )
 :cmd            vira :terminal
 :reno           vira :%s/   (renomear/substituir no arquivo todo)
 
-PADRÕES DO NVIM 0.12 (não customizados, valem com LSP)
 ------------------------------------------------------
+PADRÕES DO NVIM 0.12 (não customizados, valem com LSP)
 grn             renomear
 gra             code action
 grr             referências
