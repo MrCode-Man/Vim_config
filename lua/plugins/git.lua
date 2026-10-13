@@ -26,8 +26,7 @@ return {
       local mapas = {
         -- Blocos de alteração (hunks)
         { "<leader>gp", gitsigns.preview_hunk,    "pré-visualizar bloco alterado" },
-        { "<leader>gs", gitsigns.stage_hunk,      "adicionar bloco (stage)" },
-        { "<leader>gu", gitsigns.undo_stage_hunk, "desfazer stage do bloco" },
+        { "<leader>gs", gitsigns.stage_hunk,      "adicionar/desfazer stage do bloco (alterna)" },
         { "<leader>gr", gitsigns.reset_hunk,      "descartar alteração do bloco" },
 
         -- Arquivo inteiro (novo: antes só dava pra fazer isso bloco a bloco)
@@ -52,13 +51,13 @@ return {
       -- Navegação entre alterações do código ( ]c e [c )
       vim.keymap.set("n", "]c", function()
         if vim.wo.diff then return "]c" end
-        vim.schedule(function() gitsigns.next_hunk() end)
+        vim.schedule(function() gitsigns.nav_hunk("next") end)
         return "<Ignore>"
       end, { expr = true, desc = "Ir para próxima alteração Git" })
 
       vim.keymap.set("n", "[c", function()
         if vim.wo.diff then return "[c" end
-        vim.schedule(function() gitsigns.prev_hunk() end)
+        vim.schedule(function() gitsigns.nav_hunk("prev") end)
         return "<Ignore>"
       end, { expr = true, desc = "Ir para alteração Git anterior" })
     end,
@@ -67,6 +66,7 @@ return {
   -- 2. DIFFVIEW: Interface gráfica visual para ver Diffs e resolver Conflitos de Merge
   {
     "sindrets/diffview.nvim",
+    cmd = { "DiffviewOpen", "DiffviewClose", "DiffviewFileHistory", "DiffviewToggleFiles", "DiffviewFocusFiles", "DiffviewRefresh" },
     dependencies = { "nvim-lua/plenary.nvim" },
     config = function()
       local actions = require("diffview.actions")

@@ -1,10 +1,11 @@
 return {
   -- 1. Ícones bonitos no menu de autocompletar
-  { "onsails/lspkind.nvim" },
+  { "onsails/lspkind.nvim", lazy = true },
 
   -- 2. O Motor de Autocompletar (Cmp) e Snippets
   {
     "hrsh7th/nvim-cmp",
+    event = { "InsertEnter", "CmdlineEnter" },
     dependencies = {
       "hrsh7th/cmp-nvim-lsp",
       "hrsh7th/cmp-buffer",
@@ -21,11 +22,30 @@ return {
 
       require("luasnip.loaders.from_vscode").lazy_load()
 
+      local function cores_do_cmp()
+        vim.api.nvim_set_hl(0, "CmpNormal", { bg = "#313244" })               -- fundo do menu
+        vim.api.nvim_set_hl(0, "CmpBorder", { fg = "#cdd6f4", bg = "#313244" }) -- borda branca
+        vim.api.nvim_set_hl(0, "CmpSel",    { bg = "#585b70", bold = true })    -- item selecionado
+      end
+      cores_do_cmp()
+      vim.api.nvim_create_autocmd("ColorScheme", {
+        group = vim.api.nvim_create_augroup("CoresDoCmp", { clear = true }),
+        callback = cores_do_cmp,
+      })
+
       cmp.setup({
         snippet = { expand = function(args) luasnip.lsp_expand(args.body) end },
+        -- Menu de sugestões com borda clara e fundo próprio (cores definidas em
+        -- cores_do_cmp() abaixo), pra se destacar do código atrás.
         window = {
-          completion = cmp.config.window.bordered(),
-          documentation = cmp.config.window.bordered(),
+          completion = cmp.config.window.bordered({
+            border = "rounded",
+            winhighlight = "Normal:CmpNormal,FloatBorder:CmpBorder,CursorLine:CmpSel,Search:None",
+          }),
+          documentation = cmp.config.window.bordered({
+            border = "rounded",
+            winhighlight = "Normal:CmpNormal,FloatBorder:CmpBorder,Search:None",
+          }),
         },
         formatting = {
           format = lspkind.cmp_format({
@@ -39,15 +59,16 @@ return {
           ["<C-j>"] = cmp.mapping.select_next_item(),
           ["<C-Space>"] = cmp.mapping.complete(),
           ["<C-e>"] = cmp.mapping.abort(),
-          ["<CR>"] = cmp.mapping.confirm({ select = true }),
+          -- select = false: Enter só aceita o item que VOCÊ selecionou (Tab / C-j / C-k)
+          ["<CR>"] = cmp.mapping.confirm({ select = false }),
           ["<Tab>"] = cmp.mapping(function(fallback)
             if cmp.visible() then cmp.select_next_item()
-            elseif luasnip.expand_or_jumpable() then luasnip.expand_or_jump()
+            elseif luasnip.expand_or_locally_jumpable() then luasnip.expand_or_jump()
             else fallback() end
           end, { "i", "s" }),
           ["<S-Tab>"] = cmp.mapping(function(fallback)
             if cmp.visible() then cmp.select_prev_item()
-            elseif luasnip.jumpable(-1) then luasnip.jump(-1)
+            elseif luasnip.locally_jumpable(-1) then luasnip.jump(-1)
             else fallback() end
           end, { "i", "s" }),
         }),
@@ -64,7 +85,7 @@ return {
         mapping = cmp.mapping.preset.cmdline({
           ["<Tab>"] = cmp.mapping(cmp.mapping.select_next_item(), { "i", "c" }),
           ["<S-Tab>"] = cmp.mapping(cmp.mapping.select_prev_item(), { "i", "c" }),
-          ["<CR>"] = cmp.mapping.confirm({ select = true }),
+          ["<CR>"] = cmp.mapping.confirm({ select = false }),
         }),
         sources = cmp.config.sources({ { name = "path" } }, { { name = "cmdline" } })
       })
@@ -75,21 +96,39 @@ return {
   {
     "neovim/nvim-lspconfig",
     dependencies = {
-      "williamboman/mason.nvim",
-      "williamboman/mason-lspconfig.nvim",
+      "mason-org/mason.nvim",
+      "mason-org/mason-lspconfig.nvim",
       "ray-x/lsp_signature.nvim",
       "smjonas/inc-rename.nvim",
     },
     config = function()
       require("inc_rename").setup()
 
+      -- Borda arredondada em hover, signature help e floats (vim.o.winborder fica no config.lua)
       local border = "rounded"
-      vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, { border = border })
-      vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, { border = border })
 
-      -- Diagnostics são checados com mais frequência (padrão é 4000ms).
-      -- Isso também deixa o CursorHold abaixo mais responsivo.
-      vim.opt.updatetime = 300
+      -- Modo "chato" de diagnostics (liga/desliga com <leader>lx):
+      --   ligado    -> avisa enquanto digita; a linha do cursor mostra o erro completo
+      --                embaixo do código (virtual_lines) e as outras linhas só o resumo
+      --                no fim (virtual_text), então nada aparece duplicado.
+      --   desligado -> só o resumo no fim de todas as linhas; o erro completo aparece
+      --                num float ao parar o cursor.
+      local function diagnostics_modo(chato)
+        vim.g.diagnostics_chato = chato
+        local virtual_text = {
+          prefix = "●",
+          source = true,
+          severity = { min = vim.diagnostic.severity.HINT },
+        }
+        if chato then
+          virtual_text.current_line = false -- a linha do cursor usa virtual_lines
+        end
+        vim.diagnostic.config({
+          virtual_text = virtual_text,
+          virtual_lines = chato and { current_line = true } or false,
+          update_in_insert = chato,
+        })
+      end
 
       vim.api.nvim_create_autocmd("LspAttach", {
         callback = function(args)
@@ -100,8 +139,8 @@ return {
           -- no esquema de prefixos porque nunca vão conflitar com <leader>algo.
           vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
           vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
-          vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, opts)
-          vim.keymap.set("n", "]d", vim.diagnostic.goto_next, opts)
+          vim.keymap.set("n", "[d", function() vim.diagnostic.jump({ count = -1 }) end, opts)
+          vim.keymap.set("n", "]d", function() vim.diagnostic.jump({ count = 1 }) end, opts)
 
           -- Todo atalho de LSP com leader começa com <leader>l
           local function map(sufixo, acao, descricao)
@@ -118,18 +157,34 @@ return {
           -- Liga/desliga o modo "chato" (virtual_lines + update_in_insert) na hora,
           -- pra quando o aviso constante atrapalhar mais do que ajudar.
           map("x", function()
-            local atual = vim.diagnostic.config().virtual_lines
-            vim.diagnostic.config({
-              virtual_lines = not atual,
-              update_in_insert = not atual,
-            })
-            vim.notify("Diagnostics modo chato: " .. tostring(not atual))
+            diagnostics_modo(not vim.g.diagnostics_chato)
+            vim.notify("Diagnostics modo chato: " .. tostring(vim.g.diagnostics_chato))
           end, "alternar modo chato de diagnostics")
 
           -- Renomear em tempo real (você vê o resultado enquanto digita, igual JetBrains)
           vim.keymap.set("n", "<leader>lr", function()
             return ":IncRename " .. vim.fn.expand("<cword>")
           end, { expr = true, buffer = args.buf, desc = "LSP: renomear" })
+
+          -- Navegação semântica (estilo JetBrains: símbolos, hierarquias)
+          map("s", function() require("telescope.builtin").lsp_document_symbols() end,          "símbolos do arquivo (structure)")
+          map("S", function() require("telescope.builtin").lsp_dynamic_workspace_symbols() end, "buscar símbolo no projeto")
+          map("c", vim.lsp.buf.incoming_calls,                                                   "quem chama essa função")
+          map("C", vim.lsp.buf.outgoing_calls,                                                   "o que essa função chama")
+          map("T", function() vim.lsp.buf.typehierarchy("subtypes") end,                         "hierarquia: subtipos")
+          map("H", function() vim.lsp.buf.typehierarchy("supertypes") end,                       "hierarquia: supertipos")
+
+          -- Reinicia os servidores LSP do buffer (quando ele "esquece" um import/módulo novo)
+          map("R", function()
+            vim.cmd("LspRestart")
+            vim.notify("LSP reiniciado")
+          end, "reiniciar servidores LSP")
+
+          -- Alterna o hover automático (doc/tipo ao parar o cursor)
+          map("h", function()
+            vim.g.hover_automatico = not vim.g.hover_automatico
+            vim.notify("Hover automático: " .. tostring(vim.g.hover_automatico))
+          end, "alternar hover automático")
 
           -- Dicas de parâmetros ao digitar
           require("lsp_signature").on_attach({
@@ -142,171 +197,149 @@ return {
           if client and client.server_capabilities.inlayHintProvider and vim.lsp.inlay_hint then
             vim.lsp.inlay_hint.enable(true, { bufnr = args.buf })
           end
+
+          -- Destaca todos os usos do símbolo sob o cursor (igual JetBrains)
+          if client and client:supports_method("textDocument/documentHighlight") then
+            local grupo = vim.api.nvim_create_augroup("LspDocumentHighlight" .. args.buf, { clear = true })
+            vim.api.nvim_create_autocmd("CursorHold", {
+              group = grupo,
+              buffer = args.buf,
+              callback = vim.lsp.buf.document_highlight,
+            })
+            vim.api.nvim_create_autocmd({ "CursorMoved", "InsertEnter", "BufLeave" }, {
+              group = grupo,
+              buffer = args.buf,
+              callback = vim.lsp.buf.clear_references,
+            })
+          end
+
+          -- Code lens (ex.: "Run | Debug" e contagem de referências no rust-analyzer)
+          if client and client:supports_method("textDocument/codeLens") then
+            vim.lsp.codelens.enable(true, { bufnr = args.buf })
+            map("n", vim.lsp.codelens.run, "executar code lens da linha")
+          end
         end,
       })
 
-      -- Mostra o erro da linha automaticamente ao parar o cursor em cima dela.
+      -- Ao parar o cursor (sem mouse, o "passar o mouse" da JetBrains):
+      -- 1) fora do modo chato, se tem erro/aviso embaixo do cursor, mostra ele;
+      -- 2) senão, mostra a documentação/tipo do símbolo (hover).
+      -- No modo chato o erro já está na tela (virtual_lines), então só rola o hover.
+      -- <leader>lh liga/desliga o hover.
+      vim.g.hover_automatico = true
       vim.api.nvim_create_autocmd("CursorHold", {
         callback = function()
-          vim.diagnostic.open_float(nil, { focusable = false, scope = "cursor" })
+          if vim.fn.mode() ~= "n" or vim.api.nvim_win_get_config(0).relative ~= "" then
+            return
+          end
+
+          local float = not vim.g.diagnostics_chato
+            and vim.diagnostic.open_float(nil, { focusable = false, scope = "cursor" })
+          if float or not vim.g.hover_automatico or vim.fn.expand("<cword>") == "" then
+            return
+          end
+
+          if #vim.lsp.get_clients({ bufnr = 0, method = "textDocument/hover" }) > 0 then
+            vim.lsp.buf.hover({ focusable = false, silent = true })
+          end
         end,
       })
 
-      -- Customização visual dos erros
-      local signs = { Error = " ", Warn = " ", Hint = " ", Info = " " }
-      for type, icon in pairs(signs) do
-        local hl = "DiagnosticSign" .. type
-        vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = hl })
+      -- Cores do highlight semântico: o LSP diz o que cada palavra é
+      -- (classe, parâmetro, propriedade...) e isso sobrescreve o Treesitter.
+      -- Use :Inspect em cima de uma palavra pra ver quais grupos estão valendo.
+      local function cores_semanticas()
+        local grupos = {
+          ["@lsp.type.class"]          = { fg = "#f9e2af" },
+          ["@lsp.type.struct"]         = { fg = "#f9e2af" },
+          ["@lsp.type.enum"]           = { fg = "#f9e2af" },
+          ["@lsp.type.interface"]      = { fg = "#94e2d5", italic = true },
+          ["@lsp.type.typeParameter"]  = { fg = "#f2cdcd", italic = true },
+          ["@lsp.type.parameter"]      = { fg = "#eba0ac", italic = true },
+          ["@lsp.type.property"]       = { fg = "#b4befe" },
+          ["@lsp.type.enumMember"]     = { fg = "#fab387" },
+          ["@lsp.type.namespace"]      = { fg = "#fab387", italic = true },
+          ["@lsp.type.decorator"]      = { fg = "#f5c2e7" },
+          ["@lsp.type.macro"]          = { fg = "#cba6f7" },
+          ["@lsp.type.method"]         = { fg = "#89b4fa" },
+          ["@lsp.type.function"]       = { fg = "#89b4fa" },
+          ["@lsp.typemod.variable.readonly"]        = { fg = "#fab387", bold = true },
+          ["@lsp.typemod.variable.constant"]        = { fg = "#fab387", bold = true },
+          ["@lsp.typemod.variable.mutable"]         = { underline = true },
+          ["@lsp.typemod.function.defaultLibrary"]  = { fg = "#74c7ec" },
+          ["@lsp.typemod.class.defaultLibrary"]     = { fg = "#f9e2af", italic = true },
+          ["@lsp.typemod.method.defaultLibrary"]    = { fg = "#74c7ec" },
+        }
+        for grupo, estilo in pairs(grupos) do
+          vim.api.nvim_set_hl(0, grupo, estilo)
+        end
+        -- símbolo marcado como deprecated fica riscado
+        for _, tipo in ipairs({ "class", "function", "method", "variable", "property", "type" }) do
+          vim.api.nvim_set_hl(0, "@lsp.typemod." .. tipo .. ".deprecated", { strikethrough = true })
+        end
       end
 
-      -- Config "chata" de propósito: avisa enquanto você digita, mostra
-      -- sempre o texto do erro (não só quando tem vários na linha), e
-      -- ainda desenha a linha completa do diagnóstico embaixo do código
-      -- na linha onde o cursor tá. Dá pra desligar com <leader>lx.
+      cores_semanticas()
+      vim.api.nvim_create_autocmd("ColorScheme", {
+        group = vim.api.nvim_create_augroup("CoresSemanticas", { clear = true }),
+        callback = cores_semanticas,
+      })
+
+      -- Ícones dos diagnostics (usa a API nova; sign_define está deprecado)
+      local icones = {
+        [vim.diagnostic.severity.ERROR] = "\u{f057} ",
+        [vim.diagnostic.severity.WARN]  = "\u{f071} ",
+        [vim.diagnostic.severity.HINT]  = "\u{f0eb} ",
+        [vim.diagnostic.severity.INFO]  = "\u{f05a} ",
+      }
+
       vim.diagnostic.config({
-        virtual_text = {
-          prefix = "●",
-          source = "always",
-          severity = { min = vim.diagnostic.severity.HINT },
-        },
-        virtual_lines = { only_current_line = true },
-        signs = true,
+        signs = { text = icones },
         underline = true,
-        update_in_insert = true,
         severity_sort = true,
         float = {
           border = border,
-          source = "always",
+          source = true,
           header = "",
           focusable = false,
         },
       })
+
+      diagnostics_modo(true)
 
       require("mason").setup()
 
       local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
       -- Padrão usado em todas as linguagens: um servidor faz type-checking,
-      -- outro (separado) faz linting de estilo/boas práticas. Os dois rodam
-      -- juntos sem conflito porque cobrem diagnostics diferentes.
-      --   Python  -> pyright (tipos) + ruff (lint)
-      --   Rust    -> rust_analyzer rodando clippy no lugar de cargo check
+      -- outro (separado) faz linting. As configs de cada linguagem ficam em
+      -- lua/lsp/<linguagem>.lua e cada arquivo devolve { servidor = config }.
+      --   Python  -> basedpyright (tipos) + ruff (lint)
+      --   Rust    -> rust_analyzer rodando clippy
       --   C/C++   -> clangd com clang-tidy embutido
+      --   Lua     -> lua_ls
+      local servidores = {}
+      for _, linguagem in ipairs({ "python", "rust", "cpp", "lua" }) do
+        for nome, config in pairs(require("lsp." .. linguagem)) do
+          servidores[nome] = config
+        end
+      end
+
+      local nomes = vim.tbl_keys(servidores)
+
       require("mason-lspconfig").setup({
-        ensure_installed = {
-          "pyright", "ruff",
-          "rust_analyzer",
-          "clangd",
-          "lua_ls",
-        },
-        automatic_installation = true,
+        ensure_installed = nomes,
+        automatic_enable = false, -- quem liga os servidores é o vim.lsp.enable abaixo
       })
 
       -- Capabilities valem pra todos os servidores por padrão.
       vim.lsp.config('*', { capabilities = capabilities })
 
-      -- ---------------------------------------------------------------
-      -- PYTHON
-      -- ---------------------------------------------------------------
-      vim.lsp.config('pyright', {
-        settings = {
-          python = {
-            analysis = {
-              -- "strict" reporta MUITA coisa que o modo padrão ignora:
-              -- tipos implícitos em Any, retornos não anotados, etc.
-              typeCheckingMode = "standard",
-              autoSearchPaths = true,
-              useLibraryCodeForTypes = true,
-              diagnosticMode = "workspace",
-            },
-          },
-        },
-      })
+      for nome, config in pairs(servidores) do
+        vim.lsp.config(nome, config)
+      end
 
-      vim.lsp.config('ruff', {
-        init_options = {
-          settings = { logLevel = "warn" },
-        },
-        -- Evita hover duplicado: pyright cuida do hover/type info,
-        -- ruff só cuida de diagnostics + code actions de lint.
-        on_attach = function(client)
-          client.server_capabilities.hoverProvider = false
-        end,
-      })
-
-      -- ---------------------------------------------------------------
-      -- RUST
-      -- ---------------------------------------------------------------
-      vim.lsp.config('rust_analyzer', {
-        settings = {
-          ["rust-analyzer"] = {
-            check = {
-              -- clippy é bem mais chato/rigoroso que o "cargo check" padrão:
-              -- pega code smells, não só erro de compilação.
-              command = "clippy",
-              extraArgs = { "--all-targets", "--all-features" },
-            },
-            cargo = {
-              allFeatures = true,
-            },
-            procMacro = { enable = true },
-            diagnostics = {
-              experimental = { enable = true },
-            },
-          },
-        },
-      })
-
-      -- ---------------------------------------------------------------
-      -- C / C++
-      -- ---------------------------------------------------------------
-      vim.lsp.config('clangd', {
-        cmd = {
-          "clangd",
-          "--background-index",
-          -- Ativa o clang-tidy embutido no clangd: pega bugs, não só
-          -- erro de compilação (crie um .clang-tidy no projeto pra
-          -- customizar as regras; senão usa o conjunto padrão).
-          "--clang-tidy",
-          "--completion-style=detailed",
-          "--header-insertion=iwyu",
-          "--suggest-missing-includes",
-          "--all-scopes-completion",
-          "--cross-file-rename",
-        },
-        init_options = {
-          -- Warnings extras aplicados quando não há compile_commands.json
-          -- no projeto (fallback). Se você já gera compile_commands.json
-          -- via cmake/bear, essas flags são ignoradas em favor das reais.
-          fallbackFlags = { "-Wall", "-Wextra", "-Wpedantic" },
-        },
-      })
-
-      -- ---------------------------------------------------------------
-      -- LUA
-      -- ---------------------------------------------------------------
-      vim.lsp.config('lua_ls', {
-        settings = {
-          Lua = {
-            diagnostics = {
-              globals = { "vim" },
-              disable = {},
-            },
-            workspace = {
-              library = vim.api.nvim_get_runtime_file("", true),
-              checkThirdParty = false,
-            },
-            telemetry = { enable = false },
-          },
-        },
-      })
-
-      vim.lsp.enable({
-        "pyright", "ruff",
-        "rust_analyzer",
-        "clangd",
-        "lua_ls",
-      })
+      vim.lsp.enable(nomes)
     end
   },
 
@@ -318,20 +351,30 @@ return {
     opts = {},
   },
 
+  -- Instala sozinho os formatadores usados pelo conform
+  -- (ruff já vem pelo mason-lspconfig; rustfmt vem do rustup)
+  {
+    "WhoIsSethDaniel/mason-tool-installer.nvim",
+    dependencies = { "mason-org/mason.nvim" },
+    opts = {
+      ensure_installed = { "stylua", "clang-format" },
+    },
+  },
+
   -- 5. Barra de Contexto no Topo (Breadcrumbs)
   {
     "Bekaboo/dropbar.nvim",
+    event = { "BufReadPost", "BufNewFile" },
   },
 
   -- 6. Formatador de Código Automático (Conform)
   {
     "stevearc/conform.nvim",
-    opts = {},
     config = function()
       require("conform").setup({
         formatters_by_ft = {
           lua = { "stylua" },
-          python = { "isort", "black" },
+          python = { "ruff_organize_imports", "ruff_format" },
           rust = { "rustfmt", lsp_format = "fallback" },
           c = { "clang-format" },
           cpp = { "clang-format" },
@@ -342,7 +385,7 @@ return {
       -- Fica junto do resto dos atalhos de LSP, por isso <leader>lf
       vim.keymap.set({ "n", "v" }, "<leader>lf", function()
         require("conform").format({
-          lsp_fallback = true,
+          lsp_format = "fallback",
           async = false,
           timeout_ms = 500,
         })

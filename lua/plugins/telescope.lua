@@ -7,13 +7,12 @@ return {
       local telescope = require("telescope")
 
       telescope.setup({
-        defaults = {
-          theme = "dropdown",
+        defaults = require("telescope.themes").get_dropdown({
           sorting_strategy = "ascending",
           layout_config = {
             prompt_position = "top",
           },
-        },
+        }),
       })
 
       local builtin = require("telescope.builtin")
