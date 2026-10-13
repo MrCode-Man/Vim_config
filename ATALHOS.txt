@@ -1,0 +1,111 @@
+ATALHOS DO NEOVIM
+=================
+Arquivo de consulta escrito à mão: quando mudar um atalho no código,
+atualize aqui também. Dentro do nvim, <leader>? mostra os do buffer atual.
+
+<leader> = espaço
+
+GERAL
+-----
+\               abrir/fechar o Neo-tree (árvore de arquivos)
+<leader>?       mostrar os atalhos do buffer atual (which-key)
+<F1>            desativado de propósito (não abre a ajuda)
+
+JANELAS (lua/keymaps.lua)
+-------------------------
+<C-h>           focar na janela da esquerda
+<C-j>           focar na janela de baixo
+<C-k>           focar na janela de cima
+<C-l>           focar na janela da direita
+<leader>sh      dividir a tela para a esquerda
+<leader>sj      dividir a tela para baixo
+<leader>sk      dividir a tela para cima
+<leader>sl      dividir a tela para a direita
+
+TELESCOPE  <leader>t
+--------------------
+<leader>tf      buscar arquivos
+<leader>tg      buscar texto (grep)
+<leader>tb      listar buffers
+
+GIT  <leader>g  (lua/plugins/git.lua)
+-------------------------------------
+<leader>gp      pré-visualizar o bloco alterado
+<leader>gs      stage do bloco (alterna)
+<leader>gr      descartar a alteração do bloco
+<leader>gS      stage do arquivo inteiro
+<leader>gR      descartar o arquivo inteiro
+<leader>gD      diff do arquivo com o índice
+<leader>gb      quem alterou a linha (blame)
+<leader>gl      alternar blame inline
+<leader>gd      abrir Diffview (diff / conflitos)
+<leader>gq      fechar Diffview
+<leader>gh      histórico do arquivo atual
+]c / [c         próxima / anterior alteração Git
+
+  Só dentro do Diffview (resolver conflitos):
+  <leader>go    escolher nossa versão (ours)
+  <leader>gt    escolher a versão recebida (theirs)
+  <leader>ga    manter as duas versões
+
+LSP  (só em buffers com servidor LSP ativo)
+-------------------------------------------
+Sem leader:
+gd              ir para a definição (Telescope: salta direto se for uma só)
+K               documentação / tipo sob o cursor
+[d / ]d         erro anterior / próximo erro
+
+Com <leader>l:
+<leader>la      ação rápida / quick fix
+<leader>lu      usos da palavra (find usages)
+<leader>li      ir para a implementação
+<leader>lt      ir para a definição do tipo
+<leader>ld      mostrar o erro/aviso da linha
+<leader>lp      painel de problemas do projeto (Trouble)
+<leader>lx      alternar modo "chato" de diagnostics
+<leader>lr      renomear em tempo real (IncRename)
+<leader>ls      símbolos do arquivo
+<leader>lS      buscar símbolo no projeto
+<leader>lc      quem chama essa função
+<leader>lC      o que essa função chama
+<leader>lT      hierarquia: subtipos
+<leader>lH      hierarquia: supertipos
+<leader>lR      reiniciar os servidores LSP
+<leader>lh      alternar hover automático
+<leader>ln      executar code lens da linha (se o servidor suportar)
+<leader>lf      formatar o código (normal e visual; funciona sem LSP)
+
+CÓDIGO / TREESITTER
+-------------------
+]f / [f         próxima / anterior função
+]k / [k         próxima / anterior classe
+af / if         função inteira / só o corpo      (use com d, c, y, v...)
+ac / ic         classe inteira / só o corpo
+aa / ia         parâmetro inteiro / só o conteúdo
+
+AUTOCOMPLETAR (nvim-cmp, modo insert)
+-------------------------------------
+<C-j> / <C-k>   próximo / anterior item
+<Tab> / <S-Tab> próximo / anterior item (ou pula nos snippets)
+<C-Space>       abrir o autocompletar
+<C-e>           fechar o autocompletar
+<CR>            aceitar o item selecionado (só se você selecionou um)
+
+  Na linha de comando ( : ):
+  <Tab> / <S-Tab>   próximo / anterior item
+  <CR>              aceitar o item
+
+ATALHOS DE COMANDO (digitar a palavra inteira em : )
+----------------------------------------------------
+:cmd            vira :terminal
+:reno           vira :%s/   (renomear/substituir no arquivo todo)
+
+PADRÕES DO NVIM 0.12 (não customizados, valem com LSP)
+------------------------------------------------------
+grn             renomear
+gra             code action
+grr             referências
+gri             implementação
+grt             definição do tipo
+gO              símbolos do arquivo
+(seus <leader>l* já cobrem esses; os padrões são só uma alternativa)

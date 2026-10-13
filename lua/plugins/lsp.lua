@@ -132,15 +132,18 @@ return {
 
       vim.api.nvim_create_autocmd("LspAttach", {
         callback = function(args)
-          local opts = { buffer = args.buf }
           local client = vim.lsp.get_client_by_id(args.data.client_id)
 
           -- Atalhos SEM leader: convenção padrão do próprio Neovim/LSP, não entram
           -- no esquema de prefixos porque nunca vão conflitar com <leader>algo.
-          vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
-          vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
-          vim.keymap.set("n", "[d", function() vim.diagnostic.jump({ count = -1 }) end, opts)
-          vim.keymap.set("n", "]d", function() vim.diagnostic.jump({ count = 1 }) end, opts)
+          -- gd usa o Telescope: salta direto se há uma só definição, senão abre lista com preview
+          local function sem_leader(tecla, acao, descricao)
+            vim.keymap.set("n", tecla, acao, { buffer = args.buf, desc = "LSP: " .. descricao })
+          end
+          sem_leader("gd", function() require("telescope.builtin").lsp_definitions() end, "ir para definição")
+          sem_leader("K", vim.lsp.buf.hover, "documentação / tipo")
+          sem_leader("[d", function() vim.diagnostic.jump({ count = -1 }) end, "erro anterior")
+          sem_leader("]d", function() vim.diagnostic.jump({ count = 1 }) end, "próximo erro")
 
           -- Todo atalho de LSP com leader começa com <leader>l
           local function map(sufixo, acao, descricao)

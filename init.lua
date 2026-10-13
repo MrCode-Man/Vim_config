@@ -1,6 +1,7 @@
-vim.keymap.set({'n', 'i', 'v'}, '<F1>', '<Nop>', { silent = true })
+vim.keymap.set({'n', 'i', 'v'}, '<F1>', '<Nop>', { silent = true, desc = "Desativar ajuda" })
 
 require("config")
+require("keymaps")
 
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not vim.uv.fs_stat(lazypath) then

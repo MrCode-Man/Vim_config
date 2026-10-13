@@ -59,21 +59,6 @@ vim.api.nvim_create_autocmd("CmdlineChanged", {
   end,
 })
 
--- keymaps para foco entre janelas (usa Ctrl, não leader -> nunca vai conflitar com o resto)
-vim.keymap.set("n", "<C-h>", "<C-w>h", { desc = "Focar na janela da esquerda" })
-vim.keymap.set("n", "<C-j>", "<C-w>j", { desc = "Focar na janela de baixo" })
-vim.keymap.set("n", "<C-k>", "<C-w>k", { desc = "Focar na janela de cima" })
-vim.keymap.set("n", "<C-l>", "<C-w>l", { desc = "Focar na janela da direita" })
-
--- dividir a tela: agrupado sob <leader>s (de "split"), pra não brigar com
--- <leader>g (git), <leader>t (telescope) e <leader>l (lsp)
-vim.keymap.set("n", "<leader>sh", "<cmd>leftabove vsplit<CR>",  { desc = "Dividir tela para a esquerda" })
-vim.keymap.set("n", "<leader>sj", "<cmd>belowright split<CR>",  { desc = "Dividir tela para baixo" })
-vim.keymap.set("n", "<leader>sk", "<cmd>leftabove split<CR>",   { desc = "Dividir tela para cima" })
-vim.keymap.set("n", "<leader>sl", "<cmd>belowright vsplit<CR>", { desc = "Dividir tela para a direita" })
-
-
-
 
 -- comentarios coloridos: da palavra (TODO / NOTE / FIXME) ate o fim da linha
 local comentarios = {

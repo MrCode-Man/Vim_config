@@ -18,7 +18,7 @@ return {
       {
         "<leader>?",
         function() require("which-key").show({ global = false }) end,
-        desc = "Mostrar atalhos do buffer atual",
+        desc = "Atalhos: mostrar os do buffer atual",
       },
     },
   },

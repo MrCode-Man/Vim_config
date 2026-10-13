@@ -56,17 +56,17 @@ return {
       for _, alvo in ipairs(alvos) do
         local tecla, grupo = alvo[1], alvo[2]
         vim.keymap.set({ "x", "o" }, "a" .. tecla, function() select(grupo .. ".outer", "textobjects") end,
-          { desc = "Estrutura: " .. grupo .. " (tudo)" })
+          { desc = "Código: " .. grupo .. " (tudo)" })
         vim.keymap.set({ "x", "o" }, "i" .. tecla, function() select(grupo .. ".inner", "textobjects") end,
-          { desc = "Estrutura: " .. grupo .. " (dentro)" })
+          { desc = "Código: " .. grupo .. " (dentro)" })
       end
 
       -- ]f / [f = proxima/anterior funcao, ]k / [k = proxima/anterior classe
-      -- (]c e [c ja sao do git, ]a/[a ficam livres pra parametros)
-      vim.keymap.set({ "n", "x", "o" }, "]f", function() move.goto_next_start("@function.outer", "textobjects") end, { desc = "Proxima funcao" })
-      vim.keymap.set({ "n", "x", "o" }, "[f", function() move.goto_previous_start("@function.outer", "textobjects") end, { desc = "Funcao anterior" })
-      vim.keymap.set({ "n", "x", "o" }, "]k", function() move.goto_next_start("@class.outer", "textobjects") end, { desc = "Proxima classe" })
-      vim.keymap.set({ "n", "x", "o" }, "[k", function() move.goto_previous_start("@class.outer", "textobjects") end, { desc = "Classe anterior" })
+      -- (]c e [c ja sao do git)
+      vim.keymap.set({ "n", "x", "o" }, "]f", function() move.goto_next_start("@function.outer", "textobjects") end, { desc = "Código: próxima função" })
+      vim.keymap.set({ "n", "x", "o" }, "[f", function() move.goto_previous_start("@function.outer", "textobjects") end, { desc = "Código: função anterior" })
+      vim.keymap.set({ "n", "x", "o" }, "]k", function() move.goto_next_start("@class.outer", "textobjects") end, { desc = "Código: próxima classe" })
+      vim.keymap.set({ "n", "x", "o" }, "[k", function() move.goto_previous_start("@class.outer", "textobjects") end, { desc = "Código: classe anterior" })
     end,
   },
 }

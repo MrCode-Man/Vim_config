@@ -4,7 +4,7 @@ return {
     branch = "v3.x",
     cmd = "Neotree",
     keys = {
-      { "<Bslash>", "<cmd>Neotree toggle<CR>", desc = "Abrir/Fechar Neo-tree" },
+      { "<Bslash>", "<cmd>Neotree toggle<CR>", desc = "Arquivos: abrir/fechar Neo-tree" },
     },
     dependencies = {
       "nvim-lua/plenary.nvim",
