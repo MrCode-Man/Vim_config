@@ -100,9 +100,108 @@ return {
       "mason-org/mason-lspconfig.nvim",
       "ray-x/lsp_signature.nvim",
       "smjonas/inc-rename.nvim",
+      -- Renomear/mover arquivo no Neo-tree atualiza os imports (willRenameFiles do LSP)
+      {
+        "antosha417/nvim-lsp-file-operations",
+        dependencies = { "nvim-lua/plenary.nvim", "nvim-neo-tree/neo-tree.nvim" },
+        config = function() require("lsp-file-operations").setup() end,
+      },
     },
     config = function()
-      require("inc_rename").setup()
+      -- Rename "completo": o LSP troca o símbolo no código; depois uma busca textual
+      -- (ripgrep) acha o que o LSP não enxerga (comentários, docstrings, strings,
+      -- markdown, configs) e oferece trocar também. Só mexe com palavra inteira.
+      local nome_antigo
+
+      local function trocar_restantes(antigo, novo)
+        local raiz = vim.fs.root(0, { ".git" }) or vim.fn.getcwd()
+        vim.system(
+          { "rg", "--vimgrep", "--word-regexp", "--fixed-strings", "--case-sensitive", "--", antigo, raiz },
+          { text = true },
+          vim.schedule_wrap(function(r)
+            local itens, arquivos = {}, {}
+            for linha in vim.gsplit(r.stdout or "", "\n", { trimempty = true }) do
+              local arq, lnum, col, texto = linha:match("^(.-):(%d+):(%d+):(.*)$")
+              if arq then
+                itens[#itens + 1] = { filename = arq, lnum = tonumber(lnum), col = tonumber(col), text = texto }
+                arquivos[arq] = true
+              end
+            end
+            if #itens == 0 then
+              return
+            end
+
+            vim.fn.setqflist({}, " ", { title = "Restos de '" .. antigo .. "'", items = itens })
+            vim.cmd("copen")
+            local padrao = [[\C\V\<]] .. vim.fn.escape(antigo, [[\/]]) .. [[\>]]
+            local escolha = vim.fn.confirm(
+              string.format(
+                "Restam %d ocorrência(s) de '%s' em %d arquivo(s) (comentários, strings, docs...).\nTrocar por '%s'?",
+                #itens, antigo, vim.tbl_count(arquivos), novo
+              ),
+              "&Trocar tudo\n&Revisar uma a uma\n&Ignorar", 1
+            )
+            if escolha == 1 then
+              vim.cmd(string.format("silent! cfdo %%s/%s/%s/ge | update", padrao, vim.fn.escape(novo, [[\/&~]])))
+              vim.cmd("cclose")
+              vim.notify(string.format("Trocadas as %d ocorrência(s) restantes", #itens))
+            elseif escolha == 2 then
+              vim.fn.setreg("/", padrao)
+              vim.fn.feedkeys(
+                ":cfdo %s//" .. vim.fn.escape(novo, [[\/&~]]) .. "/gc | update", "n"
+              )
+            else
+              vim.cmd("cclose")
+            end
+          end)
+        )
+      end
+
+      -- Depois do rename LSP (igual JetBrains): salva só os arquivos alterados
+      -- (inclusive os que o LSP abriu em segundo plano) e avisa o tamanho do estrago.
+      require("inc_rename").setup({
+        show_message = false, -- a mensagem própria abaixo substitui a do plugin
+        post_hook = function(resultado)
+          if not resultado then
+            return
+          end
+
+          -- WorkspaceEdit pode vir como `changes` ou `documentChanges`
+          local edicoes = {} -- uri -> quantidade de trocas
+          local novo
+          for uri, lista in pairs(resultado.changes or {}) do
+            edicoes[uri] = #lista
+            novo = novo or (lista[1] and lista[1].newText)
+          end
+          for _, doc in ipairs(resultado.documentChanges or {}) do
+            if doc.textDocument and doc.edits then
+              local uri = doc.textDocument.uri
+              edicoes[uri] = (edicoes[uri] or 0) + #doc.edits
+              novo = novo or (doc.edits[1] and doc.edits[1].newText)
+            end
+          end
+
+          local total, arquivos = 0, 0
+          for uri, quantidade in pairs(edicoes) do
+            total = total + quantidade
+            arquivos = arquivos + 1
+            local buf = vim.uri_to_bufnr(uri)
+            if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].modified then
+              vim.api.nvim_buf_call(buf, function()
+                vim.cmd("silent! write")
+              end)
+            end
+          end
+
+          vim.notify(
+            string.format("Renomeado: %d ocorrência(s) em %d arquivo(s), tudo salvo", total, arquivos)
+          )
+
+          if nome_antigo and novo and nome_antigo ~= novo then
+            trocar_restantes(nome_antigo, novo)
+          end
+        end,
+      })
 
       -- Borda arredondada em hover, signature help e floats (vim.o.winborder fica no config.lua)
       local border = "rounded"
@@ -164,9 +263,12 @@ return {
             vim.notify("Diagnostics modo chato: " .. tostring(vim.g.diagnostics_chato))
           end, "alternar modo chato de diagnostics")
 
-          -- Renomear em tempo real (você vê o resultado enquanto digita, igual JetBrains)
+          -- Renomear em tempo real (você vê o resultado enquanto digita, igual JetBrains).
+          -- O nome atual já vem preenchido; o projeto inteiro é alterado e salvo (post_hook),
+          -- e o que sobrar em comentários/strings/docs é oferecido pra troca (trocar_restantes).
           vim.keymap.set("n", "<leader>lr", function()
-            return ":IncRename " .. vim.fn.expand("<cword>")
+            nome_antigo = vim.fn.expand("<cword>")
+            return ":IncRename " .. nome_antigo
           end, { expr = true, buffer = args.buf, desc = "LSP: renomear" })
 
           -- Navegação semântica (estilo JetBrains: símbolos, hierarquias)
@@ -312,7 +414,11 @@ return {
 
       require("mason").setup()
 
-      local capabilities = require('cmp_nvim_lsp').default_capabilities()
+      local capabilities = vim.tbl_deep_extend(
+        "force",
+        require('cmp_nvim_lsp').default_capabilities(),
+        require("lsp-file-operations").default_capabilities()
+      )
 
       -- Padrão usado em todas as linguagens: um servidor faz type-checking,
       -- outro (separado) faz linting. As configs de cada linguagem ficam em
