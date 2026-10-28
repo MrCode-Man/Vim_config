@@ -21,6 +21,14 @@ JANELAS (lua/keymaps.lua)
 <leader>sk      dividir a tela para cima
 <leader>sl      dividir a tela para a direita
 
+------------------------------
+EDIÇÃO (lua/keymaps.lua)
+<A-j>           mover a linha (ou seleção) para baixo
+<A-k>           mover a linha (ou seleção) para cima
+<A-Down>        igual ao <A-j>
+<A-Up>          igual ao <A-k>
+  Funcionam em normal, insert e visual; reindenta sozinho.
+
 --------------------
 TELESCOPE  <leader>t
 <leader>tf      buscar arquivos
@@ -40,7 +48,7 @@ GIT  <leader>g  (lua/plugins/git.lua)
 <leader>gd      abrir Diffview (diff / conflitos)
 <leader>gq      fechar Diffview
 <leader>gh      histórico do arquivo atual
-]c / [c         próxima / anterior alteração Git
+]c / [c         próxima / anterior alteração Git (em modo diff, vale o padrão do vim)
 
   Só dentro do Diffview (resolver conflitos):
   <leader>go    escolher nossa versão (ours)
@@ -89,6 +97,9 @@ AUTOCOMPLETAR (nvim-cmp, modo insert)
 <C-Space>       abrir o autocompletar
 <C-e>           fechar o autocompletar
 <CR>            aceitar o item selecionado (só se você selecionou um)
+<C-n> / <C-p>   próximo / anterior item (padrão do nvim-cmp)
+<C-y>           aceitar o item selecionado (padrão do nvim-cmp)
+<C-b> / <C-f>   rolar a documentação do item para cima / baixo
 
   Na linha de comando ( : ):
   <Tab> / <S-Tab>   próximo / anterior item
@@ -98,6 +109,11 @@ AUTOCOMPLETAR (nvim-cmp, modo insert)
 ATALHOS DE COMANDO (digitar a palavra inteira em : )
 :cmd            vira :terminal
 :reno           vira :%s/   (renomear/substituir no arquivo todo)
+
+------------------------------------------------------
+COMENTÁRIOS COLORIDOS (lua/config.lua, automático)
+TODO / NOTE / FIXME ganham cor do marcador até o fim da linha,
+mas só se vierem depois de um marcador de comentário (# // -- /* * ")
 
 ------------------------------------------------------
 PADRÕES DO NVIM 0.12 (não customizados, valem com LSP)
