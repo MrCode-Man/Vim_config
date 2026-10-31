@@ -250,6 +250,23 @@ return {
           end
 
           map("a", vim.lsp.buf.code_action,     "ação rápida / quick fix")
+
+          -- "Importar" estilo JetBrains (<leader>i): pede ao servidor só as ações de
+          -- import (rust-analyzer: `use`, basedpyright: import, clangd: #include) e
+          -- aplica direto se só houver uma; se houver várias, abre a lista pra escolher.
+          vim.keymap.set("n", "<leader>i", function()
+            vim.lsp.buf.code_action({
+              apply = true,
+              filter = function(acao)
+                local titulo = acao.title:lower()
+                return titulo:find("import", 1, true)
+                  or titulo:find("include", 1, true)
+                  or titulo:find("qualify", 1, true)
+                  or titulo:find("^use ")
+              end,
+            })
+          end, { buffer = args.buf, desc = "LSP: importar o que está faltando" })
+
           map("u", vim.lsp.buf.references,      "usos dessa palavra (find usages)")
           map("i", vim.lsp.buf.implementation,  "ir para implementação")
           map("t", vim.lsp.buf.type_definition, "ir para definição do tipo")

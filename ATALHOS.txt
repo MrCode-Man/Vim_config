@@ -62,6 +62,9 @@ gd              ir para a definição (Telescope: salta direto se for uma só)
 K               documentação / tipo sob o cursor
 [d / ]d         erro anterior / próximo erro
 
+Importar (fora do <leader>l):
+<leader>i       importar o que está faltando (cursor no erro; aplica direto ou lista as opções)
+
 Com <leader>l:
 <leader>la      ação rápida / quick fix
 <leader>lu      usos da palavra (find usages)
