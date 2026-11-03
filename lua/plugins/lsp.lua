@@ -1,97 +1,4 @@
 return {
-  -- 1. Ícones bonitos no menu de autocompletar
-  { "onsails/lspkind.nvim", lazy = true },
-
-  -- 2. O Motor de Autocompletar (Cmp) e Snippets
-  {
-    "hrsh7th/nvim-cmp",
-    event = { "InsertEnter", "CmdlineEnter" },
-    dependencies = {
-      "hrsh7th/cmp-nvim-lsp",
-      "hrsh7th/cmp-buffer",
-      "hrsh7th/cmp-path",
-      "hrsh7th/cmp-cmdline",
-      "L3MON4D3/LuaSnip",
-      "saadparwaiz1/cmp_luasnip",
-      "rafamadriz/friendly-snippets",
-    },
-    config = function()
-      local cmp = require("cmp")
-      local luasnip = require("luasnip")
-      local lspkind = require("lspkind")
-
-      require("luasnip.loaders.from_vscode").lazy_load()
-
-      local function cores_do_cmp()
-        vim.api.nvim_set_hl(0, "CmpNormal", { bg = "#313244" })               -- fundo do menu
-        vim.api.nvim_set_hl(0, "CmpBorder", { fg = "#cdd6f4", bg = "#313244" }) -- borda branca
-        vim.api.nvim_set_hl(0, "CmpSel",    { bg = "#585b70", bold = true })    -- item selecionado
-      end
-      cores_do_cmp()
-      vim.api.nvim_create_autocmd("ColorScheme", {
-        group = vim.api.nvim_create_augroup("CoresDoCmp", { clear = true }),
-        callback = cores_do_cmp,
-      })
-
-      cmp.setup({
-        snippet = { expand = function(args) luasnip.lsp_expand(args.body) end },
-        -- Menu de sugestões com borda clara e fundo próprio (cores definidas em
-        -- cores_do_cmp() abaixo), pra se destacar do código atrás.
-        window = {
-          completion = cmp.config.window.bordered({
-            border = "rounded",
-            winhighlight = "Normal:CmpNormal,FloatBorder:CmpBorder,CursorLine:CmpSel,Search:None",
-          }),
-          documentation = cmp.config.window.bordered({
-            border = "rounded",
-            winhighlight = "Normal:CmpNormal,FloatBorder:CmpBorder,Search:None",
-          }),
-        },
-        formatting = {
-          format = lspkind.cmp_format({
-            mode = 'symbol_text',
-            maxwidth = 50,
-            ellipsis_char = '...',
-          })
-        },
-        mapping = cmp.mapping.preset.insert({
-          ["<C-k>"] = cmp.mapping.select_prev_item(),
-          ["<C-j>"] = cmp.mapping.select_next_item(),
-          ["<C-Space>"] = cmp.mapping.complete(),
-          ["<C-e>"] = cmp.mapping.abort(),
-          -- select = false: Enter só aceita o item que VOCÊ selecionou (Tab / C-j / C-k)
-          ["<CR>"] = cmp.mapping.confirm({ select = false }),
-          ["<Tab>"] = cmp.mapping(function(fallback)
-            if cmp.visible() then cmp.select_next_item()
-            elseif luasnip.expand_or_locally_jumpable() then luasnip.expand_or_jump()
-            else fallback() end
-          end, { "i", "s" }),
-          ["<S-Tab>"] = cmp.mapping(function(fallback)
-            if cmp.visible() then cmp.select_prev_item()
-            elseif luasnip.locally_jumpable(-1) then luasnip.jump(-1)
-            else fallback() end
-          end, { "i", "s" }),
-        }),
-        sources = cmp.config.sources({
-          { name = "nvim_lsp", priority = 1000 },
-          { name = "luasnip", priority = 750 },
-          { name = "buffer", priority = 500 },
-          { name = "path", priority = 250 },
-        }),
-      })
-
-      cmp.setup.cmdline("/", { mapping = cmp.mapping.preset.cmdline(), sources = { { name = "buffer" } } })
-      cmp.setup.cmdline(":", {
-        mapping = cmp.mapping.preset.cmdline({
-          ["<Tab>"] = cmp.mapping(cmp.mapping.select_next_item(), { "i", "c" }),
-          ["<S-Tab>"] = cmp.mapping(cmp.mapping.select_prev_item(), { "i", "c" }),
-          ["<CR>"] = cmp.mapping.confirm({ select = false }),
-        }),
-        sources = cmp.config.sources({ { name = "path" } }, { { name = "cmdline" } })
-      })
-    end
-  },
-
   -- 3. Configuração dos Servidores de Linguagem (LSP)
   {
     "neovim/nvim-lspconfig",
@@ -108,100 +15,9 @@ return {
       },
     },
     config = function()
-      -- Rename "completo": o LSP troca o símbolo no código; depois uma busca textual
-      -- (ripgrep) acha o que o LSP não enxerga (comentários, docstrings, strings,
-      -- markdown, configs) e oferece trocar também. Só mexe com palavra inteira.
-      local nome_antigo
-
-      local function trocar_restantes(antigo, novo)
-        local raiz = vim.fs.root(0, { ".git" }) or vim.fn.getcwd()
-        vim.system(
-          { "rg", "--vimgrep", "--word-regexp", "--fixed-strings", "--case-sensitive", "--", antigo, raiz },
-          { text = true },
-          vim.schedule_wrap(function(r)
-            local itens, arquivos = {}, {}
-            for linha in vim.gsplit(r.stdout or "", "\n", { trimempty = true }) do
-              local arq, lnum, col, texto = linha:match("^(.-):(%d+):(%d+):(.*)$")
-              if arq then
-                itens[#itens + 1] = { filename = arq, lnum = tonumber(lnum), col = tonumber(col), text = texto }
-                arquivos[arq] = true
-              end
-            end
-            if #itens == 0 then
-              return
-            end
-
-            vim.fn.setqflist({}, " ", { title = "Restos de '" .. antigo .. "'", items = itens })
-            vim.cmd("copen")
-            local padrao = [[\C\V\<]] .. vim.fn.escape(antigo, [[\/]]) .. [[\>]]
-            local escolha = vim.fn.confirm(
-              string.format(
-                "Restam %d ocorrência(s) de '%s' em %d arquivo(s) (comentários, strings, docs...).\nTrocar por '%s'?",
-                #itens, antigo, vim.tbl_count(arquivos), novo
-              ),
-              "&Trocar tudo\n&Revisar uma a uma\n&Ignorar", 1
-            )
-            if escolha == 1 then
-              vim.cmd(string.format("silent! cfdo %%s/%s/%s/ge | update", padrao, vim.fn.escape(novo, [[\/&~]])))
-              vim.cmd("cclose")
-              vim.notify(string.format("Trocadas as %d ocorrência(s) restantes", #itens))
-            elseif escolha == 2 then
-              vim.fn.setreg("/", padrao)
-              vim.fn.feedkeys(
-                ":cfdo %s//" .. vim.fn.escape(novo, [[\/&~]]) .. "/gc | update", "n"
-              )
-            else
-              vim.cmd("cclose")
-            end
-          end)
-        )
-      end
-
-      -- Depois do rename LSP (igual JetBrains): salva só os arquivos alterados
-      -- (inclusive os que o LSP abriu em segundo plano) e avisa o tamanho do estrago.
-      require("inc_rename").setup({
-        show_message = false, -- a mensagem própria abaixo substitui a do plugin
-        post_hook = function(resultado)
-          if not resultado then
-            return
-          end
-
-          -- WorkspaceEdit pode vir como `changes` ou `documentChanges`
-          local edicoes = {} -- uri -> quantidade de trocas
-          local novo
-          for uri, lista in pairs(resultado.changes or {}) do
-            edicoes[uri] = #lista
-            novo = novo or (lista[1] and lista[1].newText)
-          end
-          for _, doc in ipairs(resultado.documentChanges or {}) do
-            if doc.textDocument and doc.edits then
-              local uri = doc.textDocument.uri
-              edicoes[uri] = (edicoes[uri] or 0) + #doc.edits
-              novo = novo or (doc.edits[1] and doc.edits[1].newText)
-            end
-          end
-
-          local total, arquivos = 0, 0
-          for uri, quantidade in pairs(edicoes) do
-            total = total + quantidade
-            arquivos = arquivos + 1
-            local buf = vim.uri_to_bufnr(uri)
-            if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].modified then
-              vim.api.nvim_buf_call(buf, function()
-                vim.cmd("silent! write")
-              end)
-            end
-          end
-
-          vim.notify(
-            string.format("Renomeado: %d ocorrência(s) em %d arquivo(s), tudo salvo", total, arquivos)
-          )
-
-          if nome_antigo and novo and nome_antigo ~= novo then
-            trocar_restantes(nome_antigo, novo)
-          end
-        end,
-      })
+      -- Rename "completo" (inc-rename + varredura de comentários/strings): lua/lsp_rename.lua
+      local rename = require("lsp_rename")
+      rename.setup()
 
       -- Borda arredondada em hover, signature help e floats (vim.o.winborder fica no config.lua)
       local border = "rounded"
@@ -282,11 +98,9 @@ return {
 
           -- Renomear em tempo real (você vê o resultado enquanto digita, igual JetBrains).
           -- O nome atual já vem preenchido; o projeto inteiro é alterado e salvo (post_hook),
-          -- e o que sobrar em comentários/strings/docs é oferecido pra troca (trocar_restantes).
-          vim.keymap.set("n", "<leader>lr", function()
-            nome_antigo = vim.fn.expand("<cword>")
-            return ":IncRename " .. nome_antigo
-          end, { expr = true, buffer = args.buf, desc = "LSP: renomear" })
+          -- e o que sobrar em comentários/strings/docs é oferecido pra troca (lua/lsp_rename.lua).
+          vim.keymap.set("n", "<leader>lr", rename.iniciar,
+            { expr = true, buffer = args.buf, desc = "LSP: renomear" })
 
           -- Navegação semântica (estilo JetBrains: símbolos, hierarquias)
           map("s", function() require("telescope.builtin").lsp_document_symbols() end,          "símbolos do arquivo (structure)")
@@ -367,45 +181,8 @@ return {
         end,
       })
 
-      -- Cores do highlight semântico: o LSP diz o que cada palavra é
-      -- (classe, parâmetro, propriedade...) e isso sobrescreve o Treesitter.
-      -- Use :Inspect em cima de uma palavra pra ver quais grupos estão valendo.
-      local function cores_semanticas()
-        local grupos = {
-          ["@lsp.type.class"]          = { fg = "#f9e2af" },
-          ["@lsp.type.struct"]         = { fg = "#f9e2af" },
-          ["@lsp.type.enum"]           = { fg = "#f9e2af" },
-          ["@lsp.type.interface"]      = { fg = "#94e2d5", italic = true },
-          ["@lsp.type.typeParameter"]  = { fg = "#f2cdcd", italic = true },
-          ["@lsp.type.parameter"]      = { fg = "#eba0ac", italic = true },
-          ["@lsp.type.property"]       = { fg = "#b4befe" },
-          ["@lsp.type.enumMember"]     = { fg = "#fab387" },
-          ["@lsp.type.namespace"]      = { fg = "#fab387", italic = true },
-          ["@lsp.type.decorator"]      = { fg = "#f5c2e7" },
-          ["@lsp.type.macro"]          = { fg = "#cba6f7" },
-          ["@lsp.type.method"]         = { fg = "#89b4fa" },
-          ["@lsp.type.function"]       = { fg = "#89b4fa" },
-          ["@lsp.typemod.variable.readonly"]        = { fg = "#fab387", bold = true },
-          ["@lsp.typemod.variable.constant"]        = { fg = "#fab387", bold = true },
-          ["@lsp.typemod.variable.mutable"]         = { underline = true },
-          ["@lsp.typemod.function.defaultLibrary"]  = { fg = "#74c7ec" },
-          ["@lsp.typemod.class.defaultLibrary"]     = { fg = "#f9e2af", italic = true },
-          ["@lsp.typemod.method.defaultLibrary"]    = { fg = "#74c7ec" },
-        }
-        for grupo, estilo in pairs(grupos) do
-          vim.api.nvim_set_hl(0, grupo, estilo)
-        end
-        -- símbolo marcado como deprecated fica riscado
-        for _, tipo in ipairs({ "class", "function", "method", "variable", "property", "type" }) do
-          vim.api.nvim_set_hl(0, "@lsp.typemod." .. tipo .. ".deprecated", { strikethrough = true })
-        end
-      end
-
-      cores_semanticas()
-      vim.api.nvim_create_autocmd("ColorScheme", {
-        group = vim.api.nvim_create_augroup("CoresSemanticas", { clear = true }),
-        callback = cores_semanticas,
-      })
+      -- Cores do highlight semântico: lua/lsp_cores.lua
+      require("lsp_cores").setup()
 
       -- Ícones dos diagnostics (usa a API nova; sign_define está deprecado)
       local icones = {
@@ -493,29 +270,4 @@ return {
     event = { "BufReadPost", "BufNewFile" },
   },
 
-  -- 6. Formatador de Código Automático (Conform)
-  {
-    "stevearc/conform.nvim",
-    config = function()
-      require("conform").setup({
-        formatters_by_ft = {
-          lua = { "stylua" },
-          python = { "ruff_organize_imports", "ruff_format" },
-          rust = { "rustfmt", lsp_format = "fallback" },
-          c = { "clang-format" },
-          cpp = { "clang-format" },
-          ["_"] = { "trim_whitespace" },
-        },
-      })
-
-      -- Fica junto do resto dos atalhos de LSP, por isso <leader>lf
-      vim.keymap.set({ "n", "v" }, "<leader>lf", function()
-        require("conform").format({
-          lsp_format = "fallback",
-          async = false,
-          timeout_ms = 500,
-        })
-      end, { desc = "LSP: formatar código" })
-    end,
-  }
 }

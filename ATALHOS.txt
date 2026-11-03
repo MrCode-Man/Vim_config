@@ -73,7 +73,9 @@ Com <leader>l:
 <leader>ld      mostrar o erro/aviso da linha
 <leader>lp      painel de problemas do projeto (Trouble)
 <leader>lx      alternar modo "chato" de diagnostics
-<leader>lr      renomear em tempo real (IncRename)
+<leader>lr      renomear em tempo real (IncRename); depois troca também o que sobrar em
+                comentários/strings/docs (calcular_total, calcularTotal... viram as variações
+                do nome novo). Ocorrência em código de outro símbolo nunca é tocada.
 <leader>ls      símbolos do arquivo
 <leader>lS      buscar símbolo no projeto
 <leader>lc      quem chama essa função
@@ -83,7 +85,8 @@ Com <leader>l:
 <leader>lR      reiniciar os servidores LSP
 <leader>lh      alternar hover automático
 <leader>ln      executar code lens da linha (se o servidor suportar)
-<leader>lf      formatar o código (normal e visual; funciona sem LSP)
+<leader>lf      formatar o código agora (normal e visual; funciona sem LSP)
+<leader>lF      ligar/desligar o formatar ao salvar (começa ligado)
 
 -------------------
 CÓDIGO / TREESITTER
@@ -100,7 +103,8 @@ AUTOCOMPLETAR (nvim-cmp, modo insert)
 <C-Space>       abrir o autocompletar
 <C-e>           fechar o autocompletar
 <CR>            aceitar o item selecionado (só se você selecionou um)
-<C-n> / <C-p>   próximo / anterior item (padrão do nvim-cmp)
+<C-n> / <C-p>   próximo / anterior item (padrão do nvim-cmp; só em modo INSERT,
+                lá o Harpoon não interfere)
 <C-y>           aceitar o item selecionado (padrão do nvim-cmp)
 <C-b> / <C-f>   rolar a documentação do item para cima / baixo
 
@@ -126,3 +130,14 @@ grr             referências
 gri             implementação
 grt             definição do tipo
 gO              símbolos do arquivo
+
+------------------------------------------------
+HARPOON  (lua/plugins/harpoon.lua) - até 5 arquivos favoritos
+<leader>a       marcar o arquivo atual
+<leader>A       desmarcar o arquivo atual
+<leader>e       abrir a lista (dentro dela: dd remove a linha, d/p reordena, Enter abre, q fecha)
+<leader>1..5    ir direto para o arquivo 1..5
+<C-Tab>         próximo arquivo da lista   (só em terminais que enviam Ctrl+Tab)
+<C-S-Tab>       arquivo anterior da lista  (idem)
+<C-p>           próximo arquivo da lista   (só em modo NORMAL; funciona em qualquer terminal)
+<C-n>           arquivo anterior da lista  (idem)
