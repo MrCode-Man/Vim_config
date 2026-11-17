@@ -11,7 +11,7 @@ GERAL
 <F1>            desativado de propósito (não abre a ajuda)
 -------------------------
 
-JANELAS (lua/keymaps.lua)
+JANELAS (lua/core/keymaps.lua)
 <C-h>           focar na janela da esquerda
 <C-j>           focar na janela de baixo
 <C-k>           focar na janela de cima
@@ -22,7 +22,7 @@ JANELAS (lua/keymaps.lua)
 <leader>sl      dividir a tela para a direita
 
 ------------------------------
-EDIÇÃO (lua/keymaps.lua)
+EDIÇÃO (lua/core/keymaps.lua)
 <A-j>           mover a linha (ou seleção) para baixo
 <A-k>           mover a linha (ou seleção) para cima
 <A-Down>        igual ao <A-j>
@@ -118,9 +118,29 @@ ATALHOS DE COMANDO (digitar a palavra inteira em : )
 :reno           vira :%s/   (renomear/substituir no arquivo todo)
 
 ------------------------------------------------------
-COMENTÁRIOS COLORIDOS (lua/config.lua, automático)
-TODO / NOTE / FIXME ganham cor do marcador até o fim da linha,
-mas só se vierem depois de um marcador de comentário (# // -- /* * ")
+COMENTÁRIOS COLORIDOS (lua/core/comentarios.lua, automático)
+A linha inteira ganha fundo colorido (como o cursorline) e o texto do
+marcador até o fim da linha fica na cor. Só vale se a palavra vier depois
+de um marcador de comentário (# // -- /* * ")
+
+azul      TODO       falta fazer, mas NÃO está quebrado (melhoria, caso não tratado)
+amarelo   NOTE       explicação, não é tarefa (o porquê de algo não óbvio)
+vermelho  FIXME      está ERRADO/quebrado e precisa de conserto
+vermelho  BUG        bug conhecido (falha em tal situação), ainda sem correção
+laranja   HACK       gambiarra: funciona, mas é feia ou frágil
+laranja   XXX        olhar aqui, algo suspeito/perigoso (parecido com HACK/FIXME)
+laranja   WARN       alerta a quem for mexer: mudar aqui quebra outra coisa,
+laranja   WARNING    ou a ordem importa
+roxo      PERF       ponto lento / que dá pra otimizar
+roxo      OPTIMIZE   (igual a PERF)
+verde     SAFETY     Rust: fica acima de um bloco `unsafe` e explica POR QUE é seguro
+
+Diferenças que confundem:
+  TODO vs FIXME   TODO = o que falta; FIXME = o que está errado
+  FIXME vs BUG    FIXME = precisa de conserto; BUG = sei que falha em tal caso
+  NOTE vs WARN    NOTE informa; WARN previne erro de quem for alterar
+Dica: escreva junto o que fazer ou por quê; "# TODO" sozinho não ajuda.
+Cores/palavras: tabela no topo do lua/core/comentarios.lua
 
 ------------------------------------------------------
 PADRÕES DO NVIM 0.12 (não customizados, valem com LSP)

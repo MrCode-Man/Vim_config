@@ -2,8 +2,7 @@ vim.loader.enable() -- cache de bytecode dos módulos Lua (menos tempo de boot)
 
 vim.keymap.set({'n', 'i', 'v'}, '<F1>', '<Nop>', { silent = true, desc = "Desativar ajuda" })
 
-require("config")
-require("keymaps")
+require("core")
 
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not vim.uv.fs_stat(lazypath) then

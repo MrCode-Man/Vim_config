@@ -27,7 +27,7 @@ return {
         vim.api.nvim_set_hl(0, "CmpBorder", { fg = "#cdd6f4", bg = "#313244" }) -- borda branca
         vim.api.nvim_set_hl(0, "CmpSel",    { bg = "#585b70", bold = true })    -- item selecionado
       end
-      require("cores").ao_trocar_tema(cores_do_cmp)
+      require("core.cores").ao_trocar_tema(cores_do_cmp)
 
       cmp.setup({
         snippet = { expand = function(args) luasnip.lsp_expand(args.body) end },

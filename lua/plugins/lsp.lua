@@ -16,11 +16,11 @@ return {
       },
     },
     config = function()
-      -- Rename "completo" (inc-rename + varredura de comentários/strings): lua/lsp_rename.lua
-      local rename = require("lsp_rename")
+      -- Rename "completo" (inc-rename + varredura de comentários/strings): lua/lsp/rename.lua
+      local rename = require("lsp.rename")
       rename.setup()
 
-      -- Borda arredondada em hover, signature help e floats (vim.o.winborder fica no config.lua)
+      -- Borda arredondada em hover, signature help e floats (vim.o.winborder fica no core/options.lua)
       local border = "rounded"
 
       -- Modo "chato" de diagnostics (liga/desliga com <leader>lx):
@@ -99,7 +99,7 @@ return {
 
           -- Renomear em tempo real (você vê o resultado enquanto digita, igual JetBrains).
           -- O nome atual já vem preenchido; o projeto inteiro é alterado e salvo (post_hook),
-          -- e o que sobrar em comentários/strings/docs é oferecido pra troca (lua/lsp_rename.lua).
+          -- e o que sobrar em comentários/strings/docs é oferecido pra troca (lua/lsp/rename.lua).
           vim.keymap.set("n", "<leader>lr", rename.iniciar,
             { expr = true, buffer = args.buf, desc = "LSP: renomear" })
 
@@ -182,8 +182,8 @@ return {
         end,
       })
 
-      -- Cores do highlight semântico: lua/lsp_cores.lua
-      require("lsp_cores").setup()
+      -- Cores do highlight semântico: lua/lsp/cores.lua
+      require("lsp.cores").setup()
 
       -- Ícones dos diagnostics (usa a API nova; sign_define está deprecado)
       local icones = {
@@ -220,14 +220,14 @@ return {
 
       -- Padrão usado em todas as linguagens: um servidor faz type-checking,
       -- outro (separado) faz linting. As configs de cada linguagem ficam em
-      -- lua/lsp/<linguagem>.lua e cada arquivo devolve { servidor = config }.
+      -- lua/lsp/servers/<linguagem>.lua e cada arquivo devolve { servidor = config }.
       --   Python  -> basedpyright (tipos) + ruff (lint)
       --   Rust    -> rust_analyzer rodando clippy
       --   C/C++   -> clangd com clang-tidy embutido
       --   Lua     -> lua_ls
       local servidores = {}
       for _, linguagem in ipairs({ "python", "rust", "cpp", "lua" }) do
-        for nome, config in pairs(require("lsp." .. linguagem)) do
+        for nome, config in pairs(require("lsp.servers." .. linguagem)) do
           servidores[nome] = config
         end
       end

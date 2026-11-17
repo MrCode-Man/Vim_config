@@ -35,7 +35,7 @@ local function cores_semanticas()
 end
 
 function M.setup()
-  require("cores").ao_trocar_tema(cores_semanticas)
+  require("core.cores").ao_trocar_tema(cores_semanticas)
 end
 
 return M
