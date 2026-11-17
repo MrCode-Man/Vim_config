@@ -104,15 +104,9 @@ local function colorir_comentarios_da_janela()
   end
 end
 
-definir_cores()
+require("cores").ao_trocar_tema(definir_cores)
 
 vim.api.nvim_create_autocmd({ "VimEnter", "WinEnter", "BufWinEnter" }, {
   group = vim.api.nvim_create_augroup("ComentariosColoridos", { clear = true }),
   callback = colorir_comentarios_da_janela,
-})
-
--- trocar de tema apaga as cores customizadas, entao define de novo
-vim.api.nvim_create_autocmd("ColorScheme", {
-  group = vim.api.nvim_create_augroup("ComentariosColoridosCores", { clear = true }),
-  callback = definir_cores,
 })

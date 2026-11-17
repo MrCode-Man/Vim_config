@@ -1,3 +1,5 @@
+vim.loader.enable() -- cache de bytecode dos módulos Lua (menos tempo de boot)
+
 vim.keymap.set({'n', 'i', 'v'}, '<F1>', '<Nop>', { silent = true, desc = "Desativar ajuda" })
 
 require("config")
@@ -15,4 +17,10 @@ vim.opt.rtp:prepend(lazypath)
 -- importa de plugins
 require("lazy").setup("plugins", {
   change_detection = { notify = false }, -- Desativa avisos chatos ao salvar
+  performance = {
+    rtp = {
+      -- plugins embutidos que você não usa (netrw: o Neo-tree cuida dos arquivos)
+      disabled_plugins = { "netrwPlugin", "tutor", "tohtml", "zipPlugin", "tarPlugin", "gzip", "matchit", "rplugin", "spellfile" },
+    },
+  },
 })

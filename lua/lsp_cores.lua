@@ -35,12 +35,7 @@ local function cores_semanticas()
 end
 
 function M.setup()
-  cores_semanticas()
-  -- trocar de tema apaga as cores customizadas, entao define de novo
-  vim.api.nvim_create_autocmd("ColorScheme", {
-    group = vim.api.nvim_create_augroup("CoresSemanticas", { clear = true }),
-    callback = cores_semanticas,
-  })
+  require("cores").ao_trocar_tema(cores_semanticas)
 end
 
 return M

@@ -5,15 +5,27 @@ return {
       ["rust-analyzer"] = {
         check = {
           command = "clippy",
-          extraArgs = { "--all-targets", "--all-features" },
+          allTargets = true,
+          features = "all",
+          extraArgs = { "--", "-W", "clippy::pedantic" }, -- lints extras do clippy (barulhento)
         },
         cargo = {
           allFeatures = true,
+          targetDir = true, -- build separado: nao trava o seu cargo build/run (lock)
           buildScripts = { enable = true },
         },
         procMacro = { enable = true },
         diagnostics = {
           experimental = { enable = true },
+          styleLints = { enable = true }, -- sugestoes de codigo idiomatico
+        },
+        imports = {
+          granularity = { group = "module" },
+          prefix = "self",
+        },
+        completion = {
+          autoimport = { enable = true },
+          fullFunctionSignatures = { enable = true },
         },
         semanticHighlighting = {
           strings = { enable = true },

@@ -2,6 +2,7 @@ return {
   -- 3. Configuração dos Servidores de Linguagem (LSP)
   {
     "neovim/nvim-lspconfig",
+    event = { "BufReadPre", "BufNewFile" }, -- só carrega ao abrir um arquivo (boot sem LSP)
     dependencies = {
       "mason-org/mason.nvim",
       "mason-org/mason-lspconfig.nvim",
@@ -11,7 +12,7 @@ return {
       {
         "antosha417/nvim-lsp-file-operations",
         dependencies = { "nvim-lua/plenary.nvim", "nvim-neo-tree/neo-tree.nvim" },
-        config = function() require("lsp-file-operations").setup() end,
+        config = function() require("lsp-file-operations").setup({ auto_save = true }) end,
       },
     },
     config = function()
@@ -206,6 +207,9 @@ return {
 
       diagnostics_modo(true)
 
+      -- Formatação ao digitar (ex.: rust-analyzer completa `;` e `=`), nos servidores que suportam
+      vim.lsp.on_type_formatting.enable()
+
       require("mason").setup()
 
       local capabilities = vim.tbl_deep_extend(
@@ -258,6 +262,7 @@ return {
   -- (ruff já vem pelo mason-lspconfig; rustfmt vem do rustup)
   {
     "WhoIsSethDaniel/mason-tool-installer.nvim",
+    event = "VeryLazy",
     dependencies = { "mason-org/mason.nvim" },
     opts = {
       ensure_installed = { "stylua", "clang-format" },

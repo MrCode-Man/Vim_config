@@ -3,6 +3,12 @@ return {
     "nvim-telescope/telescope.nvim",
     tag = "0.1.8", -- Versão estável do plugin
     dependencies = { "nvim-lua/plenary.nvim" },
+    cmd = "Telescope",
+    keys = {
+      { "<leader>tf", function() require("telescope.builtin").find_files() end, desc = "Telescope: buscar arquivos" },
+      { "<leader>tg", function() require("telescope.builtin").live_grep() end,  desc = "Telescope: buscar texto" },
+      { "<leader>tb", function() require("telescope.builtin").buffers() end,    desc = "Telescope: listar buffers" },
+    },
     config = function()
       local telescope = require("telescope")
 
@@ -14,13 +20,6 @@ return {
           },
         }),
       })
-
-      local builtin = require("telescope.builtin")
-
-      -- Todo atalho do Telescope começa com <leader>t
-      vim.keymap.set("n", "<leader>tf", builtin.find_files, { desc = "Telescope: buscar arquivos" })
-      vim.keymap.set("n", "<leader>tg", builtin.live_grep,  { desc = "Telescope: buscar texto" })
-      vim.keymap.set("n", "<leader>tb", builtin.buffers,    { desc = "Telescope: listar buffers" })
     end,
   },
 }
