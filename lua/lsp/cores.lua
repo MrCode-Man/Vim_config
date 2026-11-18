@@ -24,6 +24,8 @@ local function cores_semanticas()
     ["@lsp.typemod.function.defaultLibrary"]  = { fg = "#74c7ec" },
     ["@lsp.typemod.class.defaultLibrary"]     = { fg = "#f9e2af", italic = true },
     ["@lsp.typemod.method.defaultLibrary"]    = { fg = "#74c7ec" },
+    -- import/variável sem uso: o LSP marca com a tag "Unnecessary" e fica chamativo
+    ["DiagnosticUnnecessary"]                 = { fg = "#6c7086", bg = "#343547", italic = true }, -- bg = cinza a 28% sobre o fundo (mesma receita do BUG/FIXME)
   }
   for grupo, estilo in pairs(grupos) do
     vim.api.nvim_set_hl(0, grupo, estilo)
