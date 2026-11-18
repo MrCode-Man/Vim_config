@@ -56,6 +56,12 @@ GIT  <leader>g  (lua/plugins/git.lua)
   <leader>ga    manter as duas versões
 
 -------------------------------------------
+MARKDOWN  <leader>m  (lua/plugins/markdown.lua, só em arquivos .md)
+<leader>mv      modo visualização: renderiza títulos, listas, tabelas, código
+<leader>me      modo edição: mostra o texto cru (só no buffer atual)
+  Ao entrar no insert o texto cru aparece sozinho; ao sair, volta a renderizar.
+
+-------------------------------------------
 LSP  (só em buffers com servidor LSP ativo)
 Sem leader:
 gd              ir para a definição (Telescope: salta direto se for uma só)
