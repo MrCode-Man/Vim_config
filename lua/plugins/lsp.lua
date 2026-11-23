@@ -24,11 +24,10 @@ return {
       local border = "rounded"
 
       -- Modo "chato" de diagnostics (liga/desliga com <leader>lx):
-      --   ligado    -> avisa enquanto digita; a linha do cursor mostra o erro completo
-      --                embaixo do código (virtual_lines) e as outras linhas só o resumo
-      --                no fim (virtual_text), então nada aparece duplicado.
-      --   desligado -> só o resumo no fim de todas as linhas; o erro completo aparece
-      --                num float ao parar o cursor.
+      --   ligado    -> avisa enquanto digita (update_in_insert)
+      --   desligado -> só atualiza ao sair do modo insert
+      -- Nos dois, o resumo fica no fim da linha e o erro completo aparece num float
+      -- ao parar o cursor.
       local function diagnostics_modo(chato)
         vim.g.diagnostics_chato = chato
         local virtual_text = {
@@ -36,12 +35,8 @@ return {
           source = true,
           severity = { min = vim.diagnostic.severity.HINT },
         }
-        if chato then
-          virtual_text.current_line = false -- a linha do cursor usa virtual_lines
-        end
         vim.diagnostic.config({
           virtual_text = virtual_text,
-          virtual_lines = chato and { current_line = true } or false,
           update_in_insert = chato,
         })
       end
@@ -90,7 +85,7 @@ return {
           map("d", vim.diagnostic.open_float,   "mostrar erro/aviso da linha")
           map("p", "<cmd>Trouble diagnostics toggle<cr>", "painel de problemas do projeto")
 
-          -- Liga/desliga o modo "chato" (virtual_lines + update_in_insert) na hora,
+          -- Liga/desliga o modo "chato" (update_in_insert) na hora,
           -- pra quando o aviso constante atrapalhar mais do que ajudar.
           map("x", function()
             diagnostics_modo(not vim.g.diagnostics_chato)
@@ -159,9 +154,8 @@ return {
       })
 
       -- Ao parar o cursor (sem mouse, o "passar o mouse" da JetBrains):
-      -- 1) fora do modo chato, se tem erro/aviso embaixo do cursor, mostra ele;
+      -- 1) se tem erro/aviso embaixo do cursor, mostra ele;
       -- 2) senão, mostra a documentação/tipo do símbolo (hover).
-      -- No modo chato o erro já está na tela (virtual_lines), então só rola o hover.
       -- <leader>lh liga/desliga o hover.
       vim.g.hover_automatico = true
       vim.api.nvim_create_autocmd("CursorHold", {
@@ -170,8 +164,7 @@ return {
             return
           end
 
-          local float = not vim.g.diagnostics_chato
-            and vim.diagnostic.open_float(nil, { focusable = false, scope = "cursor" })
+          local float = vim.diagnostic.open_float(nil, { focusable = false, scope = "cursor" })
           if float or not vim.g.hover_automatico or vim.fn.expand("<cword>") == "" then
             return
           end
